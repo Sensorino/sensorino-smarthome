@@ -21,6 +21,7 @@ import api_server
 
 import json
 import socket
+import time
 
 # For now use asyncore.  It has its downsides, but overall it works,
 # user code is not overly ugly, doesn't force us to reimplement httpd
@@ -42,7 +43,6 @@ import asyncore
 
 class console_log():
 	# TODO: database support
-	# TODO: timestamps
 
 	# Keep this many lines of most recent log data to be present
 	# in memory and served without querying the database.
@@ -59,7 +59,7 @@ class console_log():
 	def unsubscribe_lines(self, handler):
 		self.line_handlers.remove(handler)
 
-	def handle_line(self, incoming, valid, line):
+	def handle_line(self, incoming, valid, line, timestamp):
 		prefix = '>>>'
 		if incoming:
 			prefix = '<<<'
@@ -73,7 +73,7 @@ class console_log():
 		if not valid:
 			prefix = prefix[:2] + '!'
 
-		line = prefix + ' ' + line.strip()
+		line = ( timestamp, prefix + ' ' + line.strip() )
 
 		# Append to the log and trim to n lines if longer
 		self.last_n.append(line)
@@ -88,6 +88,8 @@ class console_log():
 
 def base_message_handler(raw_msg, base):
 	global state, console
+
+	timestamp = time.time()
 
 	# We received a new message from a Sensorino node, try parsing it
 	# as far as possible.  If there's any error, still submit it to
@@ -126,10 +128,12 @@ def base_message_handler(raw_msg, base):
 
 		valid = False
 
-	console.handle_line(True, valid, raw_msg)
+	console.handle_line(True, valid, raw_msg, timestamp)
 
 def httpd_request_handler(raw_req, conn):
 	global state, base_server, console
+
+	timestamp = time.time()
 
 	if len(base_server.bases) == 0:
 		# We have no Bases connected right now.
@@ -185,7 +189,7 @@ def httpd_request_handler(raw_req, conn):
 	# base we're talking to.
 	base_server.bases[0].send_json(raw_req)
 
-	console.handle_line(False, valid, raw_req)
+	console.handle_line(False, valid, raw_req, timestamp)
 
 state = sensorino.sensorino_state()
 console = console_log()
