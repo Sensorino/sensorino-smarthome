@@ -207,8 +207,8 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 		# new lines in the log.  For the whole thing to look like
 		# a valid JSON objects, we start an array first ("[")
 		content = '[' + \
-			','.join([ json.dumps(line) for line in
-				self.server.console.get_recent_lines() ]) + ','
+			''.join([ json.dumps(line) + ',' for line in
+				self.server.console.get_recent_lines() ])
 		self.send_stream_chunk(content)
 
 		self.server.console.subscribe_lines(
