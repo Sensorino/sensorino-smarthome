@@ -29,10 +29,6 @@ class sensorino_base_handler(asyncore.dispatcher_with_send):
 		sensorino.log_warn('New Base connected')
 
 	def handle_char(self, ch):
-		if not self.quote:
-			if ord(ch) <= 32:
-				return
-
 		self.obj_buffer += ch
 
 		if self.quote and not self.escape and ch == '\\':
