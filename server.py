@@ -169,7 +169,7 @@ def httpd_request_handler(raw_req, conn):
 			state.handle_set(msg)
 		else:
 			sensorino.validate_outgoing_request(msg)
-			sensorino.handle_request(msg)
+			state.handle_request(msg)
 
 		valid = True
 	except Exception as e:
