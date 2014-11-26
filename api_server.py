@@ -184,8 +184,12 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 			try:
 				self.server.handle_user_req(line, self)
 				self.send_response(200)
-				self.send_header("Content-Length", '0')
+				self.send_header("Content-Type",
+						"application/json")
+				self.send_header("Content-Length", '2')
 				self.end_headers()
+
+				self.wfile.write('{}')
 
 				return
 			except Exception as e:
@@ -244,8 +248,11 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 				raise Exception(400, 'Bad JSON: ' + e.args[0])
 
 			self.send_response(200)
-			self.send_header("Content-Length", '0')
+			self.send_header("Content-Type", "application/json")
+			self.send_header("Content-Length", '2')
 			self.end_headers()
+
+			self.wfile.write('{}')
 
 			return
 
