@@ -35,7 +35,7 @@ known_datatypes = {
 	# harm in keeping them.
 
 	# Metatypes
-	'dataType': ( 0, int ),
+	'dataType': ( 0, str ),
 	'serviceId': ( 1, int ),
 	'message': ( 2, str ),
 	'expression': ( 3, str ),
@@ -87,6 +87,8 @@ def valuelist_validate_types(vallist, datatype):
 	allowed_types = [ basic_type ]
 	if basic_type == float:
 		allowed_types.append(int)
+	if basic_type == str:
+		allowed_types.append(unicode)
 	# TODO: might also want to allow ints for bools if 0 or 1
 
 	if any([ type(val) not in allowed_types for val in vallist ]):
