@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <script type="application/javascript" src="https://rawgithub.com/kangax/fabric.js/master/dist/fabric.js"></script>
+  <script type="application/javascript" src="https://rawgithub.com/eligrey/classList.js/master/classList.js"></script>
+  <script type="application/javascript" src="https://rawgithub.com/jimhigson/oboe.js/master/dist/oboe-browser.js"></script>
+  <script type="application/javascript" src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/highlight.min.js"></script>
+  <script type="application/javascript" src="ui/panels.js"></script>
+  <script type="application/javascript" src="ui/choice.js"></script>
+  <script type="application/javascript" src="ui/sensorino.js"></script>
+  <script type="application/javascript" src="ui/radial-menu.js"></script>
+  <script type="application/javascript" src="ui/stream.js"></script>
+  <script type="application/javascript" src="ui/floorplan.js"></script>
+  <script type="application/javascript" src="ui/sensors.js"></script>
+  <script type="application/javascript" src="ui/console.js"></script>
+  <script type="application/javascript"><![CDATA[
+function init() {
+  window.sensorino = new sensorino_state();
+
+  /* Init the UI */
+  var p = new panels('panel');
+
+  /* Panel selection widget */
+  p.options = p.panels;
+  new choice('panel-choice', p);
+}
+
+function panel_floorplan_init(panel) {
+  var canvas = new fabric.Canvas('fp-real-canvas');
+
+  /* Recommended way to make a Canvas auto-resize with its parent */
+  function resize_canvas() {
+    canvas.setDimensions(
+        { width: panel.clientWidth, height: panel.clientHeight });
+    canvas.renderAll();
+  }
+
+  window.addEventListener('resize', resize_canvas, false);
+  resize_canvas();
+
+  var fp = new floorplan(canvas, sensorino);
+
+  /* Mode selection widget */
+  var handler = new panels('floorplan');
+  handler.options = handler.panels;
+  handler.options[0].name = 'Live view';
+  handler.options[0].mode = 'view';
+  handler.options[1].name = 'Load historical data';
+  handler.options[1].mode = 'hist';
+  handler.options[2].name = 'Edit floorplan';
+  handler.options[2].mode = 'edit';
+  handler.options[2].tip = 'Create or modify the layout of rooms, walls, ' +
+    'doors, sensors and actuator controls to match their physical placement ' +
+    'and desired functionality.  Drag to draw, click for menu.  Switch away ' +
+    'from the "Edit floorplan" mode to save your changes when done.';
+
+  handler.panel_switch = handler.switch;
+  handler.switch = function(to) {
+    handler.panel_switch(to);
+    fp.switch(handler.options[to].mode);
+  }
+
+  new choice('fp-mode-choice', handler);
+}
+
+function panel_console_init(panel) {
+  var cons = new sensorino_console();
+
+  /* Mode selection widget */
+  var handler = new panels('console');
+  handler.options = handler.panels;
+  handler.options[0].name = 'Live messages view & injection';
+  handler.options[1].name = 'Historical logs';
+  handler.options[2].name = 'Protocol and API docs';
+  new choice('console-mode-choice', handler);
+}
+  ]]></script>
+  <link rel="stylesheet" href="style/ui.css" />
+  <link rel="stylesheet" href="style/hljs.css" />
+ </head>
+ <body onload="init();">
+
+  <div class="panel c0" id="floorplan" panel-name="Floorplan View" panel-tip="Schematic 2D view of each floor with live or historical sensor data and clickable actuator controls">
+   <div class="choice" id="fp-mode-choice" />
+   <div id="fp-canvas" class="floorplan c0 c1 c2">
+    <canvas id="fp-real-canvas" />
+   </div>
+   <div id="fp-time-slider" class="time-slider floorplan c1">
+    TODO timeline slider
+   </div>
+   <div class="floorplan c2" />
+   <div id="fp-unused-warning" />
+  </div>
+
+  <div class="panel c1" id="stats" panel-name="Statistics View" panel-tip="Statistical charts for current and historical sensor data and your usage of actuators">
+   TODO
+  </div>
+
+  <div class="panel c2" id="rules" panel-name="Automation" panel-tip="View, create or modify rules that automate your home">
+   TODO
+  </div>
+
+  <div class="panel c3" id="detail" panel-name="Detailed Data" panel-tip="Tree-like view of all registered entities in your smarthome network">
+   TODO
+  </div>
+
+  <div class="panel c4" id="console" panel-name="Console View" panel-tip="Live view of raw JSON communication between the server and the network nodes">
+   <div class="choice" id="console-mode-choice" />
+   <pre id="console-view" class="console c0 c1" />
+   <div id="console-input" class="console c0" />
+   <div id="console-time-slider" class="time-slider console c1">
+    TODO timeline slider
+   </div>
+   <div id="console-help" class="console c2">
+    <h2>TODO</h2>
+    <h2>Structure of a Sensorino sensor-network</h2>
+     <p>TODO or link to a github wiki page</p>
+    <h2>Sensorino JSON protocol</h2>
+     <p>TODO or link to a github wiki page</p>
+    <h2>Sensorino over-the-air protocol</h2>
+     <p>TODO or link to a github wiki page</p>
+    <h2>Sensorino Rule Engine expressions</h2>
+     <p>TODO or link to a github wiki page</p>
+   </div>
+  </div>
+
+  <div class="choice" id="panel-choice" />
+  <div id="tip" />
+  <div id="conn-status-container"><span id="conn-status" /></div>
+ </body>
+</html>

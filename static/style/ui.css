@@ -1,0 +1,211 @@
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+div {
+  border: none;
+  background: none;
+}
+
+#tip.parent {
+  position: relative;
+}
+#tip {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  font-size: 14pt;
+  font-family: "Verdana";
+  z-index: 100;
+}
+
+.panel {
+  position: absolute;
+  top: 150px;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  overflow: hidden;
+}
+
+.choice {
+  overflow: hidden;
+}
+button {
+  font-size: 14pt;
+  font-family: "Verdana";
+}
+.choice-button {
+  /*position: absolute;*/
+  background: none;
+  border: none;
+  border-left: solid black 1px;
+  border-right: solid black 1px;
+  color: black;
+  font-weight: normal;
+  margin: 0 0;
+  padding: 5px 0;
+}
+.choice-button-active {
+  background-color: rgba(170, 187, 255, 0.5);
+  color: white;
+  font-weight: bold;
+}
+
+#panel-choice {
+  position: absolute;
+  top: 80px;
+  width: 96%;
+
+  border: none;
+  border-top: dashed black 1px;
+  border-radius: 20px;
+  -moz-border-radius: 20px;
+  -webkit-border-radius: 20px;
+  padding: 25px 2%;
+}
+#panel-choice .choice-button {
+  width: 20%;
+}
+
+#fp-mode-choice, #console-mode-choice {
+  position: absolute;
+  top: 20px;/*todo: remove, move round border for canvas or the .panel!! */
+  width: 96%;
+
+  border: none;
+  border-top: dashed black 1px;
+  border-radius: 20px;
+  -moz-border-radius: 20px;
+  -webkit-border-radius: 20px;
+  padding: 25px 2%;
+}
+#fp-mode-choice .choice-button {
+  width: 33%;
+}
+#console-mode-choice .choice-button {
+  width: 33%;
+}
+
+/* Display all elements in the panel over the canvas */
+#floorplan > * {
+  z-index: 10;
+}
+#fp-canvas {
+  z-index: 0;
+}
+
+#fp-unused-warning {
+  position: absolute;
+  bottom: 50px;
+  left: 0;
+  z-index: 100;
+  font-size: 12pt;
+  font-family: "Verdana";
+  color: black;
+  background: rgba(255, 255, 128, 0.5);
+  padding: 10pt;
+}
+
+#console-view {
+  position: absolute;
+  top: 90px;
+  bottom: 90px;
+  left: 30px;
+  right: 30px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 12pt;
+  white-space: pre-wrap;
+  line-height: 2pt;
+}
+
+#console-view code {
+  line-height: 13pt;
+  padding: 5pt 20px;
+  background: #f0f0f0;
+}
+
+#console-view code.error {
+  background: #f8a0a0;
+}
+
+#console-input {
+  position: absolute;
+  height: 50px;
+  bottom: 30px;
+  left: 30px;
+  right: 30px;
+}
+
+#console-edit {
+  position: absolute;
+  left: 0;
+  width: 70%;
+  height: 32px;
+  font-family: monospace;
+  font-size: 12pt;
+  white-space: pre-wrap;
+
+  background: none;
+  border: solid black 1px;
+  border-radius: 4px;
+  -moz-border-radius: 4px;
+  -webkit-border-radius: 4px;
+  font-weight: normal;
+  margin: 0;
+  padding: 0;
+}
+
+#console-send {
+  position: absolute;
+  width: 25%;
+  right: 0;
+  height: 32px;
+
+  background: none;
+  border: solid black 1px;
+  border-radius: 4px;
+  -moz-border-radius: 4px;
+  -webkit-border-radius: 4px;
+  font-weight: normal;
+  margin: 0;
+  padding: 0;
+}
+
+#console-help {
+  position: absolute;
+  top: 90px;
+  bottom: 30px;
+  left: 30px;
+  right: 30px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-size: 12pt;
+}
+
+#conn-status-container {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 100;
+  text-align: center;
+}
+
+#conn-status {
+  font-size: 12pt;
+  color: black;
+  background: #ffc;
+  padding: 10pt;
+}
+
+.time-slider {
+  position: absolute;
+  height: 50px;
+  bottom: 30px;
+  left: 30px;
+  right: 30px;
+}
