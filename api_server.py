@@ -15,6 +15,7 @@ import SimpleHTTPServer
 import urllib
 import posixpath
 import cgi
+import collections
 import os
 
 class sensorino_httpd_request_handler(medusaserver.RequestHandler):
@@ -97,6 +98,14 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 			if not found:
 				prefixes.append(chg)
 
+		def check_idx(idx, obj):
+			if isinstance(obj, collections.Mapping):
+				return idx in obj
+			if isinstance(obj, collections.Sequence):
+				return isinstance(idx, int) and idx >= 0 and \
+					idx < len(obj)
+			return False
+
 		chg_data = []
 		state = self.server.state.get_state_tree()
 		for pre in prefixes:
@@ -104,7 +113,7 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 			path = []
 			for id in pre:
 				path.append(id)
-				if id in obj:
+				if check_idx(id, obj):
 					obj = obj[id]
 				else:
 					obj = None
@@ -274,6 +283,8 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 
 		try:
 			# TODO: use bottle/flask-like routing
+
+			# TODO: also add a combined stream of all events.
 
 			if path == '/api/sensorino.json':
 				self.handle_api_sensorino()
