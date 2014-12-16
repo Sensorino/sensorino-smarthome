@@ -15,6 +15,7 @@ import SimpleHTTPServer
 import urllib
 import posixpath
 import cgi
+import os
 
 class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 	protocol_version = 'HTTP/1.1' # Enable keep-alive
@@ -304,6 +305,8 @@ class sensorino_httpd_server(medusaserver.Server):
 		self.conns = []
 
 		self.user_req_handlers = []
+
+		self.static_root = os.getcwd() + '/static'
 
 	def subscribe_user_reqs(self, handler):
 		self.user_req_handlers.append(handler)

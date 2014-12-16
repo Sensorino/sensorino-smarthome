@@ -155,7 +155,7 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         path = posixpath.normpath(urllib.unquote(path))
         words = path.split('/')
         words = filter(None, words)
-        path = os.getcwd()
+        path = self.server.static_root
         for word in words:
             drive, word = os.path.splitdrive(word)
             head, word = os.path.split(word)
