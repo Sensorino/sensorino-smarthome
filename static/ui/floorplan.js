@@ -756,7 +756,10 @@ floorplan.prototype.clear_state = function() {
 	this.elems = [];
 };
 
-/* TODO: make graphical and async, move to a different class */
+/* TODO: make graphical and async, move to a different class/file,
+ * when only one channel of given type then display it as just type addr.
+ * when only one type in a service then only show the service addr.
+ */
 floorplan.prototype.query_channels = function(reqs) {
 	var unused = this.unused.concat([]);
 	var channels = [];

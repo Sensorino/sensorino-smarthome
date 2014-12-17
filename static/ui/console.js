@@ -43,7 +43,11 @@ function sensorino_console() {
 				output_obj.removeChild(line_rec[i]);
 		}
 
-		/* TODO: scroll to the bottom, animate */
+		/* Scroll to the bottom if there's a y-overflow */
+		/* TODO: Perhaps only scroll if we were at the bottom before this
+		 * line was added.  Or possibly add an "autoscroll" checkbox.
+		 * TODO: animate */
+		code.scrollIntoView(false);
 	}
 
 	stream('/api/stream/console.json', handle_new_line);
