@@ -75,8 +75,15 @@ while 1:
 			break
 		s.sendall(d)
 	if s in r:
-		os.write(f.fileno(), s.recv(8192))
+		f.write(s.recv(8192))
+		f.flush()
 
 sys.stderr.write('Disconnecting\n')
-s.close()
-f.close()
+try:
+	s.close()
+except:
+	pass
+try:
+	f.close()
+except:
+	pass
