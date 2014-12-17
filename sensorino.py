@@ -18,6 +18,28 @@ def log_err(msg):
 def log_warn(msg):
 	sys.stderr.write(str(msg) + '\n')
 
+class message_dict(dict):
+	# Case-insensitive dict
+	def __init__(self, data):
+		if not isinstance(data, dict):
+			raise Exception('Not a dict')
+
+		super(message_dict, self).__init__()
+		for k in data:
+			self.__setitem__(k, data[k])
+
+	def __setitem__(self, key, value):
+		super(message_dict, self).__setitem__(key.lower(), value)
+
+	def __getitem__(self, key):
+		return super(message_dict, self).__getitem__(key.lower())
+
+	def __delitem__(self, key):
+		return super(message_dict, self).__delitem__(key.lower())
+
+	def __contains__(self, key):
+		return super(message_dict, self).__contains__(key.lower())
+
 def addr_from_msg(msg, addrtype):
 	return int(msg[addrtype])
 
@@ -31,51 +53,57 @@ def valuelist_from_msg(msg, datatype):
 
 	return val
 
-known_datatypes = {
+known_datatypes = [
 	# It's unlikely that we ever need to use the numerical IDs but no
 	# harm in keeping them.
 
 	# Metatypes
-	'dataType': ( 0, str ),
-	'serviceId': ( 1, int ),
-	'message': ( 2, str ),
-	'expression': ( 3, str ),
+	( 'dataType', 0, str ),
+	( 'serviceId', 1, int ),
+	( 'message', 2, str ),
+	( 'expression', 3, str ),
 	# ISO-defined physical dimensions
-	'acceleration': ( 20, float ),
-	'amount': ( 21, float ),
-	'angle': ( 22, float ),
-	'angularVelocity': ( 23, float ),
-	'area': ( 24, float ),
-	'radioactivity': ( 25, float ),
-	'electricalCapacitance': ( 26, float ),
-	'electricalResistance': ( 27, float ),
-	'electricCurrent': ( 28, float ),
-	'energy': ( 29, float ),
-	'force': ( 30, float ),
-	'frequency': ( 31, float ),
-	'illuminance': ( 32, float ),
-	'inductance': ( 33, float ),
-	'length': ( 34, float ),
-	'luminousFlux': ( 35, float ),
-	'luminousIntensity': ( 36, float ),
-	'magneticFieldStrength': ( 37, float ),
-	'mass': ( 38, float ),
-	'power': ( 39, float ),
-	'pressure': ( 40, float ),
-	'relativeHumidity': ( 41, float ),
-	'speed': ( 42, float ),
-	'temperature': ( 43, float ),
-	'time': ( 44, float ),
-	'voltage': ( 45, float ),
-	'volume': ( 46, float ),
+	( 'acceleration', 20, float ),
+	( 'amount', 21, float ),
+	( 'angle', 22, float ),
+	( 'angularVelocity', 23, float ),
+	( 'area', 24, float ),
+	( 'radioactivity', 25, float ),
+	( 'electricalCapacitance', 26, float ),
+	( 'electricalResistance', 27, float ),
+	( 'electricCurrent', 28, float ),
+	( 'energy', 29, float ),
+	( 'force', 30, float ),
+	( 'frequency', 31, float ),
+	( 'illuminance', 32, float ),
+	( 'inductance', 33, float ),
+	( 'length', 34, float ),
+	( 'luminousFlux', 35, float ),
+	( 'luminousIntensity', 36, float ),
+	( 'magneticFieldStrength', 37, float ),
+	( 'mass', 38, float ),
+	( 'power', 39, float ),
+	( 'pressure', 40, float ),
+	( 'relativeHumidity', 41, float ),
+	( 'speed', 42, float ),
+	( 'temperature', 43, float ),
+	( 'time', 44, float ),
+	( 'voltage', 45, float ),
+	( 'volume', 46, float ),
 	# Other common types
-	'count': ( 50, int ),
-	'presence': ( 51, bool ),
-	'switch': ( 52, bool ),
-}
+	( 'count', 50, int ),
+	( 'presence', 51, bool ),
+	( 'switch', 52, bool ),
+]
+known_datatypes_dict = message_dict({})
+for t, num, py_t in known_datatypes:
+	known_datatypes_dict[t] = ( num, py_t, t )
 
 def datatype_to_basic_type(datatype):
-	return known_datatypes[datatype][1]
+	return known_datatypes_dict[datatype][1]
+
+def datatype_to_name(datatype):
+	return known_datatypes_dict[datatype][2]
 
 def valuelist_validate_unique(vallist, name='Value'):
 	if len(vallist) > len(set(vallist)):
@@ -99,11 +127,16 @@ def valuelist_validate_types(vallist, datatype):
 	if datatype == 'count':
 		if any([ val < 0 for val in vallist ]):
 			raise Exception('\'' + datatype + \
-					'\' can\' be negative')
+					'\' can\'t be negative')
 	if datatype == 'serviceId':
 		if any([ val < 0 or val > 255 for val in vallist ]):
 			raise Exception('\'' + datatype + \
 					'\' must be between 0 and 255')
+	if datatype == 'dataType':
+		for val in vallist:
+			if val in known_datatypes_dict:
+				continue
+			log_warn('Unknown data type \'' + val + '\'')
 
 def validate_incoming_publish(msg):
 	# Validate the source address
@@ -141,16 +174,17 @@ def validate_incoming_publish(msg):
 
 		vallist = valuelist_from_msg(msg, field)
 
-		if not len(vallist):
-			raise Exception('\'' + field + '\' value list is empty')
-
-		if field not in known_datatypes:
+		if field not in known_datatypes_dict:
 			log_warn('Unknown type \'' + field + '\'')
 			continue
+		name = datatype_to_name(field)
 
-		valuelist_validate_types(vallist, field)
+		if not len(vallist):
+			raise Exception('\'' + name + '\' value list is empty')
 
-		if field in [ 'serviceId' ]:
+		valuelist_validate_types(vallist, name)
+
+		if name in [ 'serviceId' ]:
 			valuelist_validate_unique(vallist, 'Service ID')
 
 	if 'dataType' in msg and 'count' in msg:
@@ -216,7 +250,12 @@ def validate_outgoing_request(msg):
 		if field in [ 'from', 'to', 'type' ]:
 			continue
 
-		if field not in [ 'serviceId', 'dataType', 'count' ]:
+		if field not in known_datatypes_dict:
+			log_warn('Unknown type \'' + field + '\'')
+			continue
+		name = datatype_to_name(field)
+
+		if name not in [ 'serviceId', 'dataType', 'count' ]:
 			log_warn('Type \'' + field +
 					'\' not allowed in Requests')
 			continue
@@ -224,11 +263,11 @@ def validate_outgoing_request(msg):
 		vallist = valuelist_from_msg(msg, field)
 
 		if not len(vallist):
-			raise Exception('\'' + field + '\' value list is empty')
-		if len(vallist) > 1 and field == 'serviceId':
+			raise Exception('\'' + name + '\' value list is empty')
+		if len(vallist) > 1 and name == 'serviceId':
 			raise Exception('Too many Service IDs')
 
-		valuelist_validate_types(vallist, field)
+		valuelist_validate_types(vallist, name)
 
 def validate_outgoing_set(msg):
 	# Validate the destination address
@@ -266,14 +305,15 @@ def validate_outgoing_set(msg):
 
 		vallist = valuelist_from_msg(msg, field)
 
-		if not len(vallist):
-			raise Exception('\'' + field + '\' value list is empty')
-
-		if field not in known_datatypes:
+		if field not in known_datatypes_dict:
 			log_warn('Unknown type \'' + field + '\'')
 			continue
+		name = datatype_to_name(field)
 
-		valuelist_validate_types(vallist, field)
+		if not len(vallist):
+			raise Exception('\'' + name + '\' value list is empty')
+
+		valuelist_validate_types(vallist, name)
 
 # Note: not basing on asyncore.dispatcher because it doesn't have any timer
 # support
@@ -340,6 +380,9 @@ class sensorino_state():
 			if field in [ 'from', 'to', 'type' ]:
 				continue
 
+			if field in known_datatypes_dict:
+				field = datatype_to_name(field)
+
 			if field == 'count' and 'dataType' in msg:
 				continue
 
@@ -383,6 +426,9 @@ class sensorino_state():
 			if field in [ 'from', 'to', 'type' ]:
 				continue
 
+			if field in known_datatypes_dict:
+				field = datatype_to_name(field)
+
 			prop_name = '_accept_count_' + field
 			if prop_name not in service_state:
 				raise Exception('This service\'s description ' +
@@ -404,8 +450,9 @@ class sensorino_state():
 					'it only accepts ' + \
 					str(service_state[prop_name]))
 
+	@staticmethod
 	def update_service_desc(service_state, types, counts):
-		changed = false
+		changed = False
 
 		# The counts are optional, if not present, calculate
 		# from the number of the dataType elements provided.
@@ -418,34 +465,38 @@ class sensorino_state():
 		# those accepted for each data type.
 		publish_by_type = {}
 		accept_by_type = {}
-		for num, type in enumerate(types):
+		for num, typ in enumerate(types):
 			if num >= counts[0] + counts[1]:
 				break
 
-			if type not in publish_by_type:
-				publish_by_type[type] = 0
-			if type not in accept_by_type:
-				accept_by_type[type] = 0
+			typ = typ.lower()
+			if typ in known_datatypes_dict:
+				typ = datatype_to_name(typ)
+
+			if typ not in publish_by_type:
+				publish_by_type[typ] = 0
+			if typ not in accept_by_type:
+				accept_by_type[typ] = 0
 
 			if num < counts[0]:
-				publish_by_type[type] += 1
+				publish_by_type[typ] += 1
 			else:
-				accept_by_type[type] += 1
+				accept_by_type[typ] += 1
 
-		for type in publish_by_type:
-			prop_name = '_publish_count_' + type
+		for typ in publish_by_type:
+			prop_name = '_publish_count_' + typ
 			if prop_name not in service_state or \
 					service_state[prop_name] != \
-					publish_by_type[type]:
-				service_state[prop_name] = publish_by_type[type]
+					publish_by_type[typ]:
+				service_state[prop_name] = publish_by_type[typ]
 				changed = True
 
-		for type in accept_by_type:
-			prop_name = '_accept_count_' + type
+		for typ in accept_by_type:
+			prop_name = '_accept_count_' + typ
 			if prop_name not in service_state or \
 					service_state[prop_name] != \
-					accept_by_type[type]:
-				service_state[prop_name] = accept_by_type[type]
+					accept_by_type[typ]:
+				service_state[prop_name] = accept_by_type[typ]
 				changed = True
 
 		return changed
@@ -478,33 +529,39 @@ class sensorino_state():
 
 		# Update all the individual values in the service
 		def handle_field(field, vallist):
+			datatype = field
+			if field in known_datatypes_dict:
+				datatype = datatype_to_name(field)
+
 			offset = 0
 			if is_set:
-				prop_name = '_publish_count_' + field
+				prop_name = '_publish_count_' + datatype
 				offset = service_state[prop_name]
 
-			if field not in service_state:
+			if datatype not in service_state:
 				# New channels in this service
-				service_state[field] = []
-				changes.append(( addr, main_service_id, field ))
+				service_state[datatype] = []
+				changes.append(( addr, main_service_id,
+						datatype ))
 
 			for num, val in enumerate(vallist):
 				pos = num + offset
-				if pos < len(service_state[field]):
-					if val == service_state[field][pos]:
+				if pos < len(service_state[datatype]):
+					if val == service_state[datatype][pos]:
 						continue
-					service_state[field][pos] = val
+					service_state[datatype][pos] = val
 					changes.append(( addr, main_service_id,
-							field, num ))
+							datatype, num ))
 				else:
-					while len(service_state[field]) < pos:
-						service_state[field]. \
+					while len(service_state[datatype]) < \
+							pos:
+						service_state[datatype]. \
 							append(None)
-					service_state[field].append(val)
+					service_state[datatype].append(val)
 					changes.append(( addr, main_service_id,
-							field, num ))
+							datatype, num ))
 
-		skip = [ 'from', 'to', 'type', 'serviceId' ]
+		skip = [ 'from', 'to', 'type', 'serviceId'.lower() ]
 		if 'dataType' in msg:
 			# Count used as a helper for dataType values
 			skip.append('count')
@@ -515,12 +572,20 @@ class sensorino_state():
 			if 'count' in msg:
 				counts = valuelist_from_msg(msg, 'count')
 
-			changed = update_service_desc(service_state,
+			changed = self.update_service_desc(service_state,
 					types, counts)
 			if changed:
 				changes.append(( addr, main_service_id ))
 
-		for field in [ k for k in msg if k not in skip ]:
+		fields = []
+		for field in msg:
+			if field in skip:
+				continue
+			if field in known_datatypes_dict:
+				field = datatype_to_name(field)
+			fields.append(field)
+
+		for field in fields:
 			handle_field(field, valuelist_from_msg(msg, field))
 		if len(service_ids):
 			handle_field('serviceId', service_ids)

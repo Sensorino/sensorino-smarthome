@@ -34,8 +34,6 @@ relay = True
 node_addr = 10
 base_addr = 0
 
-lower_types = [ k.lower() for k in sensorino.known_datatypes ]
-
 def handle_20s_timeout():
 	global s, switch, node_addr
 	switch = not switch
@@ -52,17 +50,13 @@ def handle_input(msg):
 	global s, switch, relay, node_addr
 
 	try:
-		rawobj = json.loads(msg)
+		obj = sensorino.message_dict(json.loads(msg))
 	except:
 		ret = {
 			'error': 'syntaxError',
 		}
 		s.send(json.dumps(ret).encode('utf8'))
 		return
-
-	obj = {}
-	for k in rawobj:
-		obj[k.lower()] = rawobj[k]
 
 	if 'type' not in obj:
 		ret = {
@@ -78,8 +72,8 @@ def handle_input(msg):
 	for prop in [ 'switch' ]:
 		if prop in obj and not isinstance(obj[prop], bool):
 			ok = 0
-	if 'datatype' in obj and (not isinstance(obj['datatype'], basestring) or
-			obj['datatype'].lower() not in lower_types):
+	if 'dataType' in obj and (not isinstance(obj['dataType'], basestring) or
+			obj['dataType'] not in sensorino.known_datatypes_dict):
 		ok = 0
 
 	if 'to' not in obj or not isinstance(obj['to'], int) or \
@@ -98,7 +92,7 @@ def handle_input(msg):
 		s.send(json.dumps(ret).encode('utf8'))
 		return
 
-	if 'serviceid' not in obj or obj['serviceid'] not in [ 2, 3 ]:
+	if 'serviceId' not in obj or obj['serviceId'] not in [ 2, 3 ]:
 		ret = {
 			'from': node_addr,
 			'to': base_addr,
@@ -113,26 +107,26 @@ def handle_input(msg):
 			'from': node_addr,
 			'to': base_addr,
 			'type': 'err',
-			'serviceId': obj['serviceid'],
+			'serviceId': obj['serviceId'],
 		}
 		s.send(json.dumps(ret).encode('utf8'))
 		return
 
-	if obj['type'] == 'request' and 'datatype' in obj and \
-			obj['datatype'].lower() not in [ 'datatype', 'switch' ]:
+	if obj['type'] == 'request' and 'dataType' in obj and \
+			obj['dataType'].lower() not in [ 'datatype', 'switch' ]:
 		ret = {
 			'from': node_addr,
 			'to': base_addr,
 			'type': 'err',
-			'serviceId': obj['serviceid'],
+			'serviceId': obj['serviceId'],
 			'dataType': 'DataType',
 		}
 		s.send(json.dumps(ret).encode('utf8'))
 		return
 
-	if obj['type'] == 'request' and 'datatype' in obj and \
-			obj['datatype'].lower() == 'datatype':
-		if obj['serviceid'] == 2:
+	if obj['type'] == 'request' and 'dataType' in obj and \
+			obj['dataType'].lower() == 'datatype':
+		if obj['serviceId'] == 2:
 			# Relay service accepts one value and publishes none
 			cnt = [ 0, 1 ]
 		else:
@@ -142,7 +136,7 @@ def handle_input(msg):
 			'from': node_addr,
 			'to': base_addr,
 			'type': 'publish',
-			'serviceId': obj['serviceid'],
+			'serviceId': obj['serviceId'],
 			'count': cnt,
 			'dataType': 'Switch',
 		}
@@ -151,7 +145,7 @@ def handle_input(msg):
 
 	# Now we know the request has no DataType or DataType is Switch
 	if obj['type'] == 'request':
-		if obj['serviceid'] == 2:
+		if obj['serviceId'] == 2:
 			val = relay
 		else:
 			val = switch
@@ -159,19 +153,19 @@ def handle_input(msg):
 			'from': node_addr,
 			'to': base_addr,
 			'type': 'publish',
-			'serviceId': obj['serviceid'],
+			'serviceId': obj['serviceId'],
 			'switch': val,
 		}
 		s.send(json.dumps(ret).encode('utf8'))
 		return
 
 	# Now we know type is "set"
-	if obj['serviceid'] == 3:
+	if obj['serviceId'] == 3:
 		ret = {
 			'from': node_addr,
 			'to': base_addr,
 			'type': 'err',
-			'serviceId': obj['serviceid'],
+			'serviceId': obj['serviceId'],
 		}
 		s.send(json.dumps(ret).encode('utf8'))
 		return

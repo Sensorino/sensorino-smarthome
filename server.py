@@ -97,7 +97,7 @@ def base_message_handler(raw_msg, base):
 	# console log object.
 
 	try:
-		msg = json.loads(raw_msg)
+		msg = sensorino.message_dict(json.loads(raw_msg))
 
 		# Basic validation
 		if 'type' not in msg:
@@ -121,7 +121,7 @@ def base_message_handler(raw_msg, base):
 
 		# If it parses, submit it to the state handler anyway
 		try:
-			msg = json.loads(raw_msg)
+			msg = sensorino.message_dict(json.loads(raw_msg))
 			state.handle_invalid_incoming(msg)
 		except:
 			pass
@@ -142,7 +142,7 @@ def httpd_request_handler(raw_req, conn):
 		raise Exception(503, 'No Base connected')
 
 	try:
-		msg = json.loads(raw_req)
+		msg = sensorino.message_dict(json.loads(raw_req))
 	except Exception as e:
 		# For simplicity we don't allow sending non-JSON junk
 		# to the Base through the web UI.  Don't store such

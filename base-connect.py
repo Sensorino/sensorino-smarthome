@@ -66,12 +66,12 @@ while 1:
 		r, w, e = select.select([ f, s ], [], [ f, s ])
 	except KeyboardInterrupt:
 		break
-	if len(e):
+	if e:
 		break
 
 	if f in r:
 		d = os.read(f.fileno(), 8192)
-		if not len(d):
+		if not d:
 			break
 		s.sendall(d)
 	if s in r:
