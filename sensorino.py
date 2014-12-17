@@ -10,6 +10,7 @@
 import sys
 import collections
 import asyncore
+import copy
 
 def log_err(msg):
 	sys.stderr.write(str(msg) + '\n')
@@ -386,8 +387,14 @@ class sensorino_state():
 			if prop_name not in service_state:
 				raise Exception('This service\'s description ' +
 						'has not been received yet or' +
-						'it did not include \'' +
+						' it did not include \'' +
 						field + '\'')
+			# Note: if the user manually sends a correct message to
+			# a service that we don't yet know the description of,
+			# we're gonna end up with an inconsistent state in the
+			# server.  Perhaps should automatically query all
+			# affected services every time we send a message we
+			# don't understand, with a delay of a few seconds.
 
 			vallist = valuelist_from_msg(msg, field)
 			if len(vallist) > service_state[prop_name]:
