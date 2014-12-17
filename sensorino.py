@@ -386,14 +386,19 @@ class sensorino_state():
 			if field == 'count' and 'dataType' in msg:
 				continue
 
-			if field == 'serviceId' and main_service_id == 0:
-				continue
+			vallist = valuelist_from_msg(msg, field)
+
+			if field == 'serviceId':
+				if main_service_id == 0:
+					continue
+				vallist = service_ids
+				if not vallist:
+					continue
 
 			prop_name = '_publish_count_' + field
 			if prop_name not in service_state:
 				continue
 
-			vallist = valuelist_from_msg(msg, field)
 			if len(vallist) > service_state[prop_name]:
 				raise Exception('Service published ' + \
 					str(len(vallist)) + ' \'' + field + \
@@ -429,6 +434,13 @@ class sensorino_state():
 			if field in known_datatypes_dict:
 				field = datatype_to_name(field)
 
+			vallist = valuelist_from_msg(msg, field)
+
+			if field == 'serviceId':
+				vallist = service_ids
+				if not vallist:
+					continue
+
 			prop_name = '_accept_count_' + field
 			if prop_name not in service_state:
 				raise Exception('This service\'s description ' +
@@ -442,7 +454,6 @@ class sensorino_state():
 			# affected services every time we send a message we
 			# don't understand, with a delay of a few seconds.
 
-			vallist = valuelist_from_msg(msg, field)
 			if len(vallist) > service_state[prop_name]:
 				raise Exception('Setting ' + \
 					str(len(vallist)) + ' \'' + field + \
