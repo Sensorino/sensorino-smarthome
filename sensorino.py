@@ -398,8 +398,18 @@ class sensorino_state():
 			prop_name = '_publish_count_' + field
 			if prop_name not in service_state:
 				continue
+			cnt = service_state[prop_name]
+			prop_name = '_accept_count_' + field
+			if prop_name not in service_state:
+				continue
+			cnt += service_state[prop_name]
 
-			if len(vallist) > service_state[prop_name]:
+			# For now we allow publishing up to the total number
+			# of channels of given type.  If the number is
+			# higher than the publish_count then we should
+			# check that this is a response to a "request"
+			# message, otherwise not reject the message.
+			if len(vallist) > cnt:
 				raise Exception('Service published ' + \
 					str(len(vallist)) + ' \'' + field + \
 					'\' values while only ' + \
