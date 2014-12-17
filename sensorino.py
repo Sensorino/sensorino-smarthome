@@ -585,6 +585,16 @@ class sensorino_state():
 				field = datatype_to_name(field)
 			fields.append(field)
 
+		# Special case: if a set message has no values and is
+		# addressed at a service with one boolean channel, toggle
+		# that channel's value.
+		if is_set and not fields and \
+				'_accept_count_switch' in service_state and \
+				service_state['_accept_count_switch'] == 1 and \
+				'switch' in service_state:
+			msg['switch'] = not service_state['switch'][0]
+			fields.append('switch')
+
 		for field in fields:
 			handle_field(field, valuelist_from_msg(msg, field))
 		if len(service_ids):
