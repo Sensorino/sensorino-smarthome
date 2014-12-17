@@ -574,6 +574,7 @@ class sensorino_state():
 
 		skip = [ 'from', 'to', 'type', 'serviceId'.lower() ]
 		if 'dataType' in msg:
+			skip.append('dataType'.lower())
 			# Count used as a helper for dataType values
 			skip.append('count')
 
