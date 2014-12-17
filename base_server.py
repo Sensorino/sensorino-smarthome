@@ -12,21 +12,12 @@ import sys
 import socket
 import asyncore
 
-class sensorino_base_handler(asyncore.dispatcher_with_send):
-	def __init__(self, sock, addr, server):
-		asyncore.dispatcher_with_send.__init__(self, sock)
-
-		self.client_address = addr
-		self.server = server
-
-		self.server.bases.append(self)
-
+class obj_parser():
+	def __init__(self):
 		self.obj_buffer = ''
 		self.nest_depth = 0
 		self.quote = 0
 		self.escape = 0
-
-		sensorino.log_warn('New Base connected')
 
 	def handle_char(self, ch):
 		self.obj_buffer += ch
@@ -49,11 +40,26 @@ class sensorino_base_handler(asyncore.dispatcher_with_send):
 					# regardless of what Base we are, i.e.
 					# messages from all the Bases will
 					# reach the server all mixed-up.
-					self.server.handle_obj(self.obj_buffer,
-							self)
+					ret = self.obj_buffer
 
 					self.obj_buffer = ''
 					self.nest_depth = 0
+
+					return ret
+		return None
+
+class sensorino_base_handler(asyncore.dispatcher_with_send):
+	def __init__(self, sock, addr, server):
+		asyncore.dispatcher_with_send.__init__(self, sock)
+
+		self.client_address = addr
+		self.server = server
+
+		self.server.bases.append(self)
+
+		self.parser = obj_parser()
+
+		sensorino.log_warn('New Base connected')
 
 	def handle_close(self):
 		asyncore.dispatcher.handle_close(self)
@@ -64,7 +70,9 @@ class sensorino_base_handler(asyncore.dispatcher_with_send):
 
 	def handle_read(self):
 		for chr in self.recv(8192).decode('utf-8'):
-			self.handle_char(chr)
+			obj = self.parser.handle_char(chr)
+			if obj is not None:
+				self.server.handle_obj(obj, self)
 
 	def send_json(self, buffer):
 		self.send(buffer.encode('utf-8'))
