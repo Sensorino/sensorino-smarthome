@@ -78,7 +78,7 @@ def handle_input(msg):
 	for prop in [ 'switch' ]:
 		if prop in obj and not isinstance(obj[prop], bool):
 			ok = 0
-	if 'datatype' in obj and (not isinstance(obj['datatype'], str) or
+	if 'datatype' in obj and (not isinstance(obj['datatype'], basestring) or
 			obj['datatype'].lower() not in lower_types):
 		ok = 0
 
