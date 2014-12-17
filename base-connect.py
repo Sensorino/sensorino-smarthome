@@ -30,10 +30,11 @@ import os
 
 f = open(sys.argv[1], 'r+')
 attr = termios.tcgetattr(f)
+# Pretty much cfmakeraw()
 attr[0] = 0			# iflag
 attr[1] = 0			# oflag
 attr[2] = termios.CS8 | termios.CLOCAL | termios.CREAD # cflag
-attr[3] = termios.ICANON	# lflag
+attr[3] = 0			# lflag
 attr[4] = termios.B115200	# ispeed
 attr[5] = termios.B115200	# ospeed
 
