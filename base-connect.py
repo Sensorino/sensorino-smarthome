@@ -28,18 +28,34 @@ import select
 import sys
 import os
 
-f = open(sys.argv[1], 'r+')
-attr = termios.tcgetattr(f)
-# Pretty much cfmakeraw()
-attr[0] = 0			# iflag
-attr[1] = 0			# oflag
-attr[2] = termios.CS8 | termios.CLOCAL | termios.CREAD # cflag
-attr[3] = 0			# lflag
-attr[4] = termios.B115200	# ispeed
-attr[5] = termios.B115200	# ospeed
+ports = [
+	'/dev/ttyUSB0', '/dev/ttyUSB1',
+	'/dev/ttyACM0', '/dev/ttyACM1',
+	'/dev/ttyS0'
+]
+if len(sys.argv) > 1:
+	ports = sys.argv[1:]
+for port in ports:
+	try:
+		f = open(port, 'r+')
+		# Pretty much cfmakeraw()
+		attr = termios.tcgetattr(f)
+		attr[0] = 0			# iflag
+		attr[1] = 0			# oflag
+		attr[2] = termios.CS8 | termios.CLOCAL | termios.CREAD # cflag
+		attr[3] = 0			# lflag
+		attr[4] = termios.B115200	# ispeed
+		attr[5] = termios.B115200	# ospeed
+		termios.tcsetattr(f, termios.TCSAFLUSH, attr)
+		break
+	except (IOError, termios.error) as e:
+		sys.stderr.write(port + ': ' + str(e) + '\n')
+		f = None
+if f is None:
+	sys.stderr.write('Please pass the character device path as argument\n')
+	sys.exit(-1)
 
-termios.tcsetattr(f, termios.TCSAFLUSH, attr)
-sys.stderr.write('Connected to serial port\n')
+sys.stderr.write('Connected to serial port ' + port + '\n')
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect(config.base_server_address)
