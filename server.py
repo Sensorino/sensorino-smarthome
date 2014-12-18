@@ -100,9 +100,9 @@ def base_message_handler(raw_msg, base):
 		msg = sensorino.message_dict(json.loads(raw_msg))
 
 		# Basic validation
-		if 'type' not in msg:
+		if 'type' not in msg and 'error' not in msg:
 			raise Exception('No type')
-		type = msg['type']
+		type = msg.get('type', 'error')
 
 		if type not in [ 'publish', 'error' ]:
 			raise Exception('Unknown type')

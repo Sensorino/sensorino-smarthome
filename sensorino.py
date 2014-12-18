@@ -206,6 +206,9 @@ def validate_incoming_publish(msg):
 def validate_incoming_error(msg):
 	# Validate the source address
 	if 'from' not in msg:
+		if 'error' in msg:
+			return
+
 		raise Exception('Messsage is missing a \'from\' field')
 	try:
 		addr = addr_from_msg(msg, 'from')
@@ -215,6 +218,9 @@ def validate_incoming_error(msg):
 	if addr < 1 or addr > 255:
 		raise Exception('\'' + str(msg['from']) + \
 				'\' is not a valid node address')
+
+	# TODO: reject if we have nothing enqueued / have not sent anything
+	# in the last couple of seconds?
 
 def validate_outgoing_request(msg):
 	# Validate the destination address
@@ -325,6 +331,7 @@ class sensorino_state():
 		# kept in the queue here so we can associate any incoming
 		# error message with that outgoing message.
 		self.pending = {}
+		self.last_addr = None
 
 		self.change_handlers = []
 
@@ -357,6 +364,7 @@ class sensorino_state():
 			state = copy.deepcopy(self.state[addr])
 
 		self.pending[addr] = ( msg, callback, state, change_set )
+		self.last_addr = addr
 		# TODO: Set a timeout?
 
 	# Must have gone through the static validation first
@@ -645,13 +653,18 @@ class sensorino_state():
 		# TODO: save the full message to the database
 
 		addr = addr_from_msg(msg, 'from')
+		self.last_addr = None
 
 		self.update_state(msg, addr, False)
 
 	def handle_error(self, msg):
 		# TODO: save the full message to the database
 
-		addr = addr_from_msg(msg, 'from')
+		if 'addr' in msg:
+			addr = addr_from_msg(msg, 'from')
+		else:
+			addr = self.last_addr
+		self.last_addr = None
 
 		if addr not in self.pending:
 			return
@@ -705,7 +718,8 @@ class sensorino_state():
 
 	def handle_invalid_incoming(self, msg):
 		# TODO: save the full message to the database
-		pass
+
+		self.last_addr = None
 
 	def handle_invalid_outgoing(self, msg):
 		# TODO: save the full message to the database
@@ -714,6 +728,8 @@ class sensorino_state():
 			addr = addr_from_msg(msg, 'to')
 		except:
 			return
+
+		self.last_addr = None
 
 		# We take no responsibility for the new message, don't
 		# enqueue it
