@@ -349,13 +349,10 @@ class sensorino_state():
 		addr = addr_from_msg(msg, 'to')
 
 		if addr in self.pending:
-			# Another operation is pending
-			prev_msg, prev_callback, prev_state, c = \
-				self.pending.pop(addr)
-
-			# Notify
-			if prev_callback is not None:
-				prev_callback(prev_msg, 'no-error', None)
+			# Another operation is pending, assume success if
+			# no other indication from the remote end.  Kind of
+			# questionable.
+			self.queued_success(addr)
 
 		# Save a deep copy of the affected node's state so we can
 		# restore it if the operation results in an error.
@@ -365,7 +362,59 @@ class sensorino_state():
 
 		self.pending[addr] = ( msg, callback, state, change_set )
 		self.last_addr = addr
-		# TODO: Set a timeout?
+		# TODO: Set a timeout?  assume success if timeout expired
+
+	def queued_success(self, addr):
+		'''Clear the queue of pending transaction-like requests
+		if its not empty.  The transaction was successful.'''
+		self.last_addr = None
+
+		if addr not in self.pending:
+			return
+
+		# An operation was pending
+		prev_msg, prev_callback, prev_state, c = self.pending.pop(addr)
+
+		# Notify
+		if prev_callback is not None:
+			prev_callback(prev_msg, 'no-error', None)
+
+	def queued_failure(self, addr):
+		'''Clear the queue of pending transaction-like requests
+		if its not empty.  The transaction failed.'''
+
+		# TODO: mark the failed request's status in the database
+		# as failure
+
+		self.last_addr = None
+
+		if addr not in self.pending:
+			return
+
+		prev_msg, prev_callback, prev_state, change_set = \
+			self.pending.pop(addr)
+
+		# If the failing message is a Set, try to restore the
+		# recorded node's state to what it was prior to the
+		# operation.
+		if prev_msg['type'] == 'set':
+			if prev_state is None and addr in self.state:
+				del self.state[addr]
+			elif prev_state is not None:
+				self.state[addr] = prev_state
+
+			# If we could call update_state, that would take
+			# care of this for us...
+			if len(change_set):
+				for handler in self.change_handlers:
+					handler(change_set)
+
+		if prev_callback is not None:
+			prev_callback(prev_msg, 'error', msg)
+
+		# TODO: possibly, if the last message was a Set, now
+		# send a Request so we can reliably know the current
+		# state.
 
 	# Must have gone through the static validation first
 	def validate_incoming_publish(self, msg):
@@ -653,49 +702,20 @@ class sensorino_state():
 		# TODO: save the full message to the database
 
 		addr = addr_from_msg(msg, 'from')
-		self.last_addr = None
+
+		self.queued_success(addr)
 
 		self.update_state(msg, addr, False)
 
 	def handle_error(self, msg):
 		# TODO: save the full message to the database
 
-		if 'addr' in msg:
+		if 'from' in msg:
 			addr = addr_from_msg(msg, 'from')
 		else:
 			addr = self.last_addr
-		self.last_addr = None
 
-		if addr not in self.pending:
-			return
-
-		prev_msg, prev_callback, prev_state, change_set = \
-			self.pending.pop(addr)
-
-		# TODO: mark the last message's status in the database
-		# as failure
-
-		# If the failing message is a Set, try to restore the
-		# recorded node's state to what it was prior to the
-		# operation.
-		if prev_msg['type'] == 'set':
-			if prev_state is None and addr in self.state:
-				del self.state[addr]
-			elif prev_state is not None:
-				self.state[addr] = prev_state
-
-			# If we could call update_state, that would take
-			# care of this for us...
-			if len(change_set):
-				for handler in self.change_handlers:
-					handler(change_set)
-
-		if prev_callback is not None:
-			prev_callback(prev_msg, 'error', msg)
-
-		# TODO: possibly, if the last message was a Set, now
-		# send a Request so we can reliably know the current
-		# state.
+		self.queued_failure(addr)
 
 	def handle_request(self, msg, callback = None):
 		# TODO: save the full message to the database with an
@@ -719,7 +739,13 @@ class sensorino_state():
 	def handle_invalid_incoming(self, msg):
 		# TODO: save the full message to the database
 
-		self.last_addr = None
+		if 'from' in msg:
+			addr = addr_from_msg(msg, 'from')
+		else:
+			addr = self.last_addr
+
+		# Questionable.. but assume failure if timeout not expired
+		self.queued_failure(addr)
 
 	def handle_invalid_outgoing(self, msg):
 		# TODO: save the full message to the database
@@ -727,20 +753,13 @@ class sensorino_state():
 		try:
 			addr = addr_from_msg(msg, 'to')
 		except:
-			return
-
-		self.last_addr = None
+			addr = self.last_addr
 
 		# We take no responsibility for the new message, don't
-		# enqueue it
-		if addr in self.pending:
-			# Another operation is pending
-			prev_msg, prev_callback, prev_state, c = \
-				self.pending.pop(addr)
-
-			# Notify
-			if prev_callback is not None:
-				prev_callback(prev_msg, 'no-error', None)
+		# enqueue and terminate any running transactions.
+		# Again questionable here but assume success if we've
+		# got no other indication from the remote end.
+		self.queued_success(addr)
 
 	def get_state_tree(self):
 		return self.state
