@@ -188,6 +188,35 @@ sensorino_state.prototype.get_channel_list = function() {
 	return channels;
 }
 
+sensorino_state.prototype.get_channel_lists = function() {
+	var ac_channels = [], se_channels = [];
+
+	for (var node_addr in this.nodes) {
+		var nd = this.nodes[node_addr];
+		for (var svc_id in nd) {
+			var svc = nd[svc_id];
+			for (var type in svc) {
+				if (type[0] == '_')
+					continue;
+
+				var publish_cnt = Object.keys(svc[type]).length; /* TODO: use max idx */
+				if ('_publich_count_' + type in svc)
+					publish_cnt = svc['_publish_count_' + type]
+
+				for (var chan_id in svc[type]) {
+					var chan = [ node_addr, svc_id, type, chan_id ];
+					if (chan_id < publish_cnt)
+						se_channels.push(chan);
+					else
+						ac_channels.push(chan);
+				}
+			}
+		}
+	}
+
+	return [ se_channels, ac_channels ];
+}
+
 /* From MDN */
 if (!String.prototype.startsWith) {
 	Object.defineProperty(String.prototype, 'startsWith', {

@@ -304,7 +304,8 @@ function floorplan(canvas, sensorino_state) {
 
 		var cls = map[type];
 		/* TODO: this part will be async */
-		var channels = this_obj.query_channels(cls.prototype.channel_reqs);
+		var channels = this_obj.query_channels(
+				cls.prototype.channel_reqs, elem_type == 'ac');
 		if (channels === null)
 			return;
 
@@ -760,15 +761,30 @@ floorplan.prototype.clear_state = function() {
  * when only one channel of given type then display it as just type addr.
  * when only one type in a service then only show the service addr.
  */
-floorplan.prototype.query_channels = function(reqs) {
-	var unused = this.unused.concat([]);
+floorplan.prototype.query_channels = function(reqs, is_actuator) {
+	var unused = [];
 	var channels = [];
-	var all = this.sensorino_state.get_channel_list();
+	var all = this.sensorino_state.get_channel_lists()[is_actuator ? 1 : 0];
+
+  /* .indexOf() won't work for checking if a channel is present in "all"
+	 * because it uses pointer comparison.  We could use .find or .includes/
+	 * .contains() and they polyfills from MDN but probably it's simplest
+	 * and possibly faster to use an object.
+	 */
+	var all_map = {};
+	all.forEach(function(chan) { all_map[chan] = chan; });
+
+  /* Get a list of unused channels of the type indicated by is_actuator */
+	this.unused.forEach(function(chan) {
+			if (chan in all_map)
+				unused.push(chan);
+		});
 
 	for (var i = 0; i < reqs.length; i++) {
 		var msg = 'TODO: proper UI with a nice clickable list of all ' +
 			'services, with the ones yet unused highlighted in bold.\n\n' +
-			'Please select a data channel to be used as input channel ' + (i + 1) +
+			'Please select a ' + (is_actuator ? 'actuator' : 'sensor') +
+			' data channel to be used as input channel ' + (i + 1) +
 			' of ' + reqs.length + ' required by this widget.  The following ' +
 			'type is expected: ' + reqs[i] + '\n\nThe following channels are ' +
 			'currently unused:\n';
@@ -778,16 +794,15 @@ floorplan.prototype.query_channels = function(reqs) {
 			msg += '\n...';
 
 		var resp = prompt(msg, unused[0]);
-		var channel = null;
-		for (var j = 0; j < all.length; j++)
-			if (resp.replace(' ', '') == '' + all[j])
-				channel = all[j];
+		if (resp === null)
+			return null;
 
 		/* TODO: allow any address as long as the components are valid */
-		if (channel === null) {
+		if (!(resp.replace(' ', '') in all_map)) {
 			alert('Invalid channel address.');
 			return null;
 		}
+		var channel = all_map[resp.replace(' ', '')];
 
 		var idx = unused.indexOf(channel);
 		unused.splice(idx, 1);
