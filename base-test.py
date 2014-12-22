@@ -28,26 +28,31 @@ import sys
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect(config.base_server_address)
 
-switch = True
-relay = True
-
 node_addr = 10
 base_addr = 0
 
+svc_manager_svcs = [ 0 ]
+relay_svcs = [ 2 ]
+switch_svcs = [ 3 ]
+
+switch = [ True for svc in switch_svcs ]
+relay = [ True for svc in relay_svcs ]
+
 def handle_20s_timeout():
-	global s, switch, node_addr
-	switch = not switch
+	global s, switch, node_addr, base_addr, switch_svcs
+	switch[0] = not switch[0]
 	obj = {
 		'from': node_addr,
 		'to': base_addr,
 		'type': 'publish',
-		'serviceId': 3,
-		'switch': switch,
+		'serviceId': switch_svcs[0],
+		'switch': switch[0],
 	}
 	s.send(json.dumps(obj).encode('utf8'))
 
 def handle_input(msg):
-	global s, switch, relay, node_addr
+	global s, switch, relay, node_addr, base_addr, \
+		svc_manager_svcs, relay_svcs, switch_svcs
 
 	try:
 		obj = sensorino.message_dict(json.loads(msg))
@@ -92,7 +97,8 @@ def handle_input(msg):
 		s.send(json.dumps(ret).encode('utf8'))
 		return
 
-	if 'serviceId' not in obj or obj['serviceId'] not in [ 2, 3 ]:
+	all_svcs = svc_manager_svcs + relay_svcs + switch_svcs
+	if 'serviceId' not in obj or obj['serviceId'] not in all_svcs:
 		ret = {
 			'from': node_addr,
 			'to': base_addr,
@@ -102,12 +108,26 @@ def handle_input(msg):
 		s.send(json.dumps(ret).encode('utf8'))
 		return
 
-	if obj['type'] not in [ 'set', 'request' ]:
+	permitted_types = [ 'request' ]
+	if obj['serviceId'] in relay_svcs:
+		permitted_types.append('set')
+
+	if obj['type'] not in permitted_types:
 		ret = {
 			'from': node_addr,
 			'to': base_addr,
 			'type': 'err',
 			'serviceId': obj['serviceId'],
+		}
+		s.send(json.dumps(ret).encode('utf8'))
+		return
+
+	if obj['serviceId'] in svc_manager_svcs:
+		ret = {
+			'from': node_addr,
+			'to': base_addr,
+			'type': 'publish',
+			'serviceId': all_svcs,
 		}
 		s.send(json.dumps(ret).encode('utf8'))
 		return
@@ -126,7 +146,7 @@ def handle_input(msg):
 
 	if obj['type'] == 'request' and 'dataType' in obj and \
 			obj['dataType'].lower() == 'datatype':
-		if obj['serviceId'] == 2:
+		if obj['serviceId'] in relay_svcs:
 			# Relay service accepts one value and publishes none
 			cnt = [ 0, 1 ]
 		else:
@@ -145,10 +165,10 @@ def handle_input(msg):
 
 	# Now we know the request has no DataType or DataType is Switch
 	if obj['type'] == 'request':
-		if obj['serviceId'] == 2:
-			val = relay
+		if obj['serviceId'] in relay_svcs:
+			val = relay[relay_svcs.index(obj['serviceId'])]
 		else:
-			val = switch
+			val = switch[switch_svcs.index(obj['serviceId'])]
 		ret = {
 			'from': node_addr,
 			'to': base_addr,
@@ -159,26 +179,16 @@ def handle_input(msg):
 		s.send(json.dumps(ret).encode('utf8'))
 		return
 
-	# Now we know type is "set"
-	if obj['serviceId'] == 3:
-		ret = {
-			'from': node_addr,
-			'to': base_addr,
-			'type': 'err',
-			'serviceId': obj['serviceId'],
-		}
-		s.send(json.dumps(ret).encode('utf8'))
-		return
-
-	# Now we know ServiceId is 2
-	prev_relay = relay
+	# Now we know type is "set" and ServiceId is relay's
+	idx = relay_svcs.index(obj['serviceId'])
+	prev_relay = relay[idx]
 	if 'switch' in obj:
-		relay = obj['switch']
+		relay[idx] = obj['switch']
 	else:
-		relay = not relay
+		relay[idx] = not relay[idx]
 
-	if relay != prev_relay:
-		if relay:
+	if relay[idx] != prev_relay:
+		if relay[idx]:
 			sys.stderr.write('It\'s bright again.\n')
 		else:
 			sys.stderr.write('It\'s dark now.\n')
