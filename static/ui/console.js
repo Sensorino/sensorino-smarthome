@@ -21,6 +21,7 @@ function sensorino_console() {
 		 * hint or group messages with headers something like "over 5 minutes ago",
 		 * "over 30 minutes ago", "yesterday", "last week", etc.
 		 */
+		/* TODO: highlight >>> and >>! in bold to differentiate it from <<< */
 
 		var code = document.createElement('code');
 		code.textContent = line;

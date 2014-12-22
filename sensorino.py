@@ -425,7 +425,7 @@ class sensorino_state():
 		node_state = self.state[addr]
 
 		# Find the service in question
-		service_ids = valuelist_from_msg(msg, 'serviceId')
+		service_ids = copy.copy(valuelist_from_msg(msg, 'serviceId'))
 		main_service_id = service_ids.pop(0)
 		if main_service_id not in node_state:
 			return
@@ -482,7 +482,7 @@ class sensorino_state():
 		node_state = self.state[addr]
 
 		# Find the service in question
-		service_ids = valuelist_from_msg(msg, 'serviceId')
+		service_ids = copy.copy(valuelist_from_msg(msg, 'serviceId'))
 		main_service_id = service_ids.pop(0)
 		if main_service_id not in node_state:
 			raise Exception('Unkown destination Service ID: ' + \
@@ -595,7 +595,7 @@ class sensorino_state():
 		node_state = self.state[addr]
 
 		# Find the service in question
-		service_ids = valuelist_from_msg(msg, 'serviceId')
+		service_ids = copy.copy(valuelist_from_msg(msg, 'serviceId'))
 
 		main_service_id = service_ids.pop(0)
 		if main_service_id not in node_state:
