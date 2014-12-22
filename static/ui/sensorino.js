@@ -7,6 +7,8 @@ function sensorino_state() {
 	var status_obj = document.getElementById('conn-status');
 	var this_obj = this;
 
+	this.special_services = { "0": "Service Manager", "1": "Rule Engine" };
+
 	function notify(path, oldval, newval) {
 		var cbs = this_obj.listeners[path] || [];
 
@@ -175,6 +177,8 @@ sensorino_state.prototype.get_channel_list = function() {
 	for (var node_addr in this.nodes) {
 		var nd = this.nodes[node_addr];
 		for (var svc_id in nd) {
+			if (svc_id in this.special_services)
+				continue;
 			var svc = nd[svc_id];
 			for (var type in svc) {
 				if (type[0] == '_')
@@ -194,6 +198,9 @@ sensorino_state.prototype.get_channel_lists = function() {
 	for (var node_addr in this.nodes) {
 		var nd = this.nodes[node_addr];
 		for (var svc_id in nd) {
+			if (svc_id in this.special_services)
+				continue;
+
 			var svc = nd[svc_id];
 			for (var type in svc) {
 				if (type[0] == '_')
