@@ -275,6 +275,85 @@ sensorino_state.prototype.get_channel_lists = function() {
 	return [ se_channels, ac_channels ];
 }
 
+sensorino_state.prototype.format_channel = function(addr) {
+	var node_addr = parseInt(addr[0]);
+	var svc_id = parseInt(addr[1]);
+	var data_type = addr[2];
+	var channel_id = parseInt(addr[3]);
+
+	var str = node_addr + ',' + svc_id;
+	var type_str = ' (type: ' + data_type + ')';
+
+	var svc = this.nodes[node_addr][svc_id];
+	var cnt = 0;
+	for (var type in svc)
+		if (type[0] != '_')
+			cnt++;
+
+	if (cnt == 1)
+		return str + type_str;
+
+	str += ',' + data_type;
+
+	var channels = svc[data_type];
+	var cnt = 0;
+	for (var chnum in channels)
+		if (chnum[0] != '_')
+			cnt++;
+
+	if (cnt == 1)
+		return str + type_str;
+
+	str += ',' + channel_id;
+
+	return str + type_str;
+}
+
+sensorino_state.prototype.parse_channel = function(str) {
+	var elems = str.replace(/ /g, '').split(',', 4);
+
+	if (elems.length < 2)
+		return null;
+
+	var node_addr = parseInt(elems[0]);
+	var svc_id = parseInt(elems[1]);
+	var data_type = null;
+	var channel_id = 0;
+
+	if (elems.length <= 2) {
+		if (!(node_addr in this.nodes))
+			return null;
+		if (!(svc_id in this.nodes[node_addr]))
+			return null;
+
+		var svc = this.nodes[node_addr][svc_id];
+		for (var type in svc) {
+			if (type[0] == '_')
+				continue;
+			if (data_type !== null)
+				return null;	/* If type not given, the service have only one */
+			data_type = type;
+		}
+	} else
+		data_type = elems[2];
+
+	/* TODO: eventually only check that type name is valid, for now we
+	 * check if given type was already discovered in this service.  */
+
+	if (!(node_addr in this.nodes))
+		return null;
+	if (!(svc_id in this.nodes[node_addr]))
+		return null;
+	var svc = this.nodes[node_addr][svc_id];
+	if (!(data_type in svc))
+		return null;
+
+	if (elems.length >= 4)
+		channel_id = parseInt(elems[3]);
+
+	return [ node_addr, svc_id, data_type, channel_id ];
+}
+
 /* From MDN */
 if (!String.prototype.startsWith) {
 	Object.defineProperty(String.prototype, 'startsWith', {

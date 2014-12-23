@@ -801,21 +801,27 @@ floorplan.prototype.query_channels = function(reqs, is_actuator) {
 			' of ' + reqs.length + ' required by this widget.  The following ' +
 			'type is expected: ' + reqs[i] + '\n\nThe following channels are ' +
 			'currently unused:\n';
+		var options = [];
 		for (var j = 0; j < unused.length && j < 10; j++)
-			msg += '\n' + unused[j];
+			options.push(this.sensorino_state.format_channel(unused[j]));
+		for (var j = 0; j < options.length; j++)
+			msg += '\n' + options[j];
 		if (unused.length > 10)
 			msg += '\n...';
 
-		var resp = prompt(msg, unused[0]);
+		var def = undefined;
+		if (options.length)
+			def = options[0].split(' ', 1)[0];
+		var resp = prompt(msg, def);
 		if (resp === null)
 			return null;
 
 		/* TODO: allow any address as long as the components are valid */
-		if (!(resp.replace(' ', '') in all_map)) {
+		var channel = this.sensorino_state.parse_channel(resp);
+		if (!(channel in all_map)) {
 			alert('Invalid channel address.');
 			return null;
 		}
-		var channel = all_map[resp.replace(' ', '')];
 
 		var idx = unused.indexOf(channel);
 		unused.splice(idx, 1);
