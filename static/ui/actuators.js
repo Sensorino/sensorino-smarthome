@@ -70,9 +70,15 @@ function actuator_switch(state, canvas, elem) {
 			', current value: ' + (value === null ? 'Unknown' :
 			(value ? 'On' : 'Off')) + '.  Click to switch ' +
 			(!value ? 'on.' : 'off.'), 'actuator');
+
+		circle.set({ radius: 9 });
+		canvas.renderAll();
 	};
 	elem.obj.viewmode_onout = function(o) {
 		clear_tip('actuator');
+
+		circle.set({ radius: 8 });
+		canvas.renderAll();
 	};
 
 	state.subscribe(channel, function(path, oldval, newval) { update(newval); });
