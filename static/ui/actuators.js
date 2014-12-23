@@ -26,7 +26,7 @@ function actuator_switch(state, canvas, elem) {
 
 	var circle = new fabric.Circle({
 		stroke: null,
-		fill: '#faf',
+		fill: '#e4e',
 		radius: 8,
 		left: 0,
 		originX: 'center',

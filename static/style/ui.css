@@ -2,6 +2,7 @@ html, body {
   width: 100%;
   height: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 div {
@@ -21,13 +22,31 @@ div {
   z-index: 100;
 }
 
+#title {
+  text-align: right;
+  padding-top: 20px;
+  font-size: 14pt;
+  font-family: "Verdana";
+}
+
 .panel {
   position: absolute;
   top: 150px;
   left: 0;
-  bottom: 0;
+  bottom: -20px;
   right: 0;
   overflow: hidden;
+  z-index: 1;
+
+  background-color: white;
+  border: none;
+  /*border-top: solid black 1px;*/
+  border-radius: 20px;
+  -moz-border-radius: 20px;
+  -webkit-border-radius: 20px;
+  box-shadow: 0 0 20px 3px #ccc;
+  -moz-box-shadow: 0 0 20px 3px #ccc;
+  -webkit-box-shadow: 0 0 20px 3px #ccc;
 }
 
 .choice {
@@ -41,12 +60,13 @@ button {
   /*position: absolute;*/
   background: none;
   border: none;
-  border-left: solid black 1px;
-  border-right: solid black 1px;
   color: black;
   font-weight: normal;
   margin: 0 0;
   padding: 5px 0;
+}
+.choice-button:not(.choice-button-active):hover {
+  background-color: rgba(240, 0, 240, 0.5);
 }
 .choice-button-active {
   background-color: rgba(170, 187, 255, 0.5);
@@ -58,13 +78,17 @@ button {
   position: absolute;
   top: 80px;
   width: 96%;
+  height: 100px;
 
   border: none;
-  border-top: dashed black 1px;
+  /*border-top: solid black 1px;*/
   border-radius: 20px;
   -moz-border-radius: 20px;
   -webkit-border-radius: 20px;
-  padding: 25px 2%;
+  box-shadow: 0 0 20px 3px #ccc;
+  -moz-box-shadow: 0 0 20px 3px #ccc;
+  -webkit-box-shadow: 0 0 20px 3px #ccc;
+  padding: 15px 2%;
 }
 #panel-choice .choice-button {
   width: 20%;
@@ -72,15 +96,9 @@ button {
 
 #fp-mode-choice, #console-mode-choice {
   position: absolute;
-  top: 20px;/*todo: remove, move round border for canvas or the .panel!! */
   width: 96%;
 
-  border: none;
-  border-top: dashed black 1px;
-  border-radius: 20px;
-  -moz-border-radius: 20px;
-  -webkit-border-radius: 20px;
-  padding: 25px 2%;
+  padding: 15px 2%;
 }
 #fp-mode-choice .choice-button {
   width: 33%;
@@ -94,7 +112,7 @@ button {
   z-index: 10;
 }
 #fp-canvas {
-  z-index: 0;
+  z-index: 5;
 }
 
 #fp-unused-warning {
@@ -151,13 +169,17 @@ button {
   white-space: pre-wrap;
 
   background: none;
-  border: solid black 1px;
+  border: none;
   border-radius: 4px;
   -moz-border-radius: 4px;
   -webkit-border-radius: 4px;
   font-weight: normal;
   margin: 0;
   padding: 0;
+
+  box-shadow: 0 0 4px 3px #ccc;
+  -moz-box-shadow: 0 0 4px 3px #ccc;
+  -webkit-box-shadow: 0 0 4px 3px #ccc;
 }
 
 #console-send {
@@ -167,13 +189,20 @@ button {
   height: 32px;
 
   background: none;
-  border: solid black 1px;
+  border: none;
   border-radius: 4px;
   -moz-border-radius: 4px;
   -webkit-border-radius: 4px;
   font-weight: normal;
   margin: 0;
   padding: 0;
+
+  box-shadow: 0 0 4px 3px #ccc;
+  -moz-box-shadow: 0 0 4px 3px #ccc;
+  -webkit-box-shadow: 0 0 4px 3px #ccc;
+}
+#console-send:hover {
+  background-color: rgb(250, 120, 250);
 }
 
 #console-help {
