@@ -46,9 +46,8 @@ function choice(obj_id, handler) {
 				option.choice_obj.classList.remove('choice-button-active');
 		}
 	}
+	handler.switch(0);
 	active_update();
-
-	/* TODO: subscribe to the handler's switch event */
 }
 
 function attach(obj, evt, fn, capt) {
