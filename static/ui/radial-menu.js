@@ -58,16 +58,13 @@ menu.prototype.create = function(x, y) {
 			o.option.fun(the_menu.param, o.option);
 		};
 		opt.obj.onover = function(o) {
-			var tip = document.getElementById('tip');
-			tip.textContent = o.option.tip;
+			set_tip(o.option.tip, 'menu-obj');
 		};
 		opt.obj.onout = function(o) {
-			tip.textContent = '';
+			clear_tip('menu-obj');
 		};
 		this.canvas.add(opt.obj);
 	}
-
-	/* TODO: show tips/labels etc. */
 }
 
 menu.prototype.close = function() {

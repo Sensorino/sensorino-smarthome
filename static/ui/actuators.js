@@ -51,13 +51,13 @@ function actuator_switch(state, canvas, elem) {
 	this.update = update;
 
 	elem.obj.viewmode_onclick = function(o) {
-		document.getElementById('tip').textContent = 'Sending new value…';
+		set_tip('Sending new value…');
 
 		state.set_channel(channel, !value, function(result) {
 			if (result === true)
-				document.getElementById('tip').textContent = 'Action executed.';
+				set_tip('Action executed.');
 			else {
-				document.getElementById('tip').textContent = 'Action failed.';
+				set_tip('Action failed.');
 				alert('Sending new value failed: ' + result);
 			}
 		});

@@ -232,13 +232,13 @@ function floorplan(canvas, sensorino_state) {
 		canvas.add(sel_symbol);
 		sel_symbol.sendToBack();
 
-		document.getElementById('tip').textContent = {
+		set_tip({
 			'pt': 'Point',
 			'ln': 'Line',
 			'tx': 'Text',
 			'se': 'Sensor',
 			'ac': 'Actuator',
-		}[selected.type];
+		}[selected.type], 'edit-obj');
 		if ('obj' in selected) {
 			selected.obj.prev_selectable = selected.obj.selectable;
 			selected.obj.selectable = false;
@@ -254,7 +254,7 @@ function floorplan(canvas, sensorino_state) {
 		canvas.remove(sel_symbol);
 		selected = null;
 
-		document.getElementById('tip').textContent = '';
+		clear_tip('edit-obj');
 	}
 
 	function start_line(pos, ltype) {
@@ -543,11 +543,13 @@ function floorplan(canvas, sensorino_state) {
 	 * and only (re-) send when we know we're online, similar to gmail, etc.
 	 */
 	function save_done(ret) {
-		document.getElementById('tip').textContent = 'Floorplan saved Ok.';
+		clear_tip('fp-save');
+		set_tip('Floorplan saved Ok.');
 	}
 
 	function save_error(err) {
-		document.getElementById('tip').textContent = 'Floorplan not saved.';
+		clear_tip('fp-save');
+		set_tip('Floorplan not saved.');
 
 		if (err.statusCode === undefined)
 			alert('Unable to save floorplan: Can\'t connect');
@@ -592,7 +594,7 @@ function floorplan(canvas, sensorino_state) {
 		/* If we're exiting the edit mode, submit new state to server */
 		/* TODO: check if anything has been modified? */
 		if (mode === 'edit' && to !== 'edit') {
-			document.getElementById('tip').textContent = 'Saving changes…';
+			set_tip('Saving changes…', 'fp-save');
 
 			var options = {
 				url: '/api/floorplan.json',

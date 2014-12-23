@@ -76,6 +76,15 @@ function panel_console_init(panel) {
   handler.options[2].name = 'Protocol and API docs';
   new choice('console-mode-choice', handler);
 }
+
+function set_tip(content, tipid) {
+  document.getElementById('tip').textContent = content;
+}
+
+function clear_tip(tipid) {
+  /* For now ignore the tipid, clear all */
+  document.getElementById('tip').textContent = '';
+}
   ]]></script>
   <link rel="stylesheet" href="style/ui.css" />
   <link rel="stylesheet" href="style/hljs.css" />

@@ -27,10 +27,10 @@ function choice(obj_id, handler) {
 			option.choice_obj.tip = option.tip;
 			attach(option.choice_obj, 'mouseover', function(evt) {
 				var choice_obj = this;
-				document.getElementById('tip').textContent = choice_obj.tip;
+				set_tip(choice_obj.tip, 'choice-' + obj_id);
 			});
 			attach(option.choice_obj, 'mouseout', function(evt) {
-				document.getElementById('tip').textContent = '';
+				clear_tip('choice-' + obj_id);
 			});
 		}
 
