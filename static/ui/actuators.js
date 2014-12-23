@@ -39,14 +39,14 @@ function actuator_switch(state, canvas, elem) {
 		originY: 'center',
 	});
 
-	function update(val) {
-		var y = val ? -10 : 10;
-		var o = val === null ? 0.5 : 1;
+	function update(new_val) {
+		value = new_val;
+
+		var y = value ? -10 : 10;
+		var o = value === null ? 0.5 : 1;
 
 		circle.set({ top: y, opacity: o });
 		canvas.renderAll();
-
-		value = val;
 	}
 	this.update = update;
 
@@ -63,7 +63,18 @@ function actuator_switch(state, canvas, elem) {
 		});
 	};
 
-	/* TODO: move to base class */
+	/* TODO: move everything below (and more) to base class */
+
+	elem.obj.viewmode_onover = function(o) {
+		set_tip('Actuator channel ' + state.format_channel(channel) +
+			', current value: ' + (value === null ? 'Unknown' :
+			(value ? 'On' : 'Off')) + '.  Click to switch ' +
+			(!value ? 'on.' : 'off.'), 'actuator');
+	};
+	elem.obj.viewmode_onout = function(o) {
+		clear_tip('actuator');
+	};
+
 	state.subscribe(channel, function(path, oldval, newval) { update(newval); });
 	update(state.get_channel(channel));
 }

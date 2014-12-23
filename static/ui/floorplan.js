@@ -163,15 +163,6 @@ function floorplan(canvas, sensorino_state) {
 	/* Canvas functionality */
 	canvas.selection = false;
 
-	canvas.on('mouse:over', function(o) {
-		if (o.target !== undefined && 'onover' in o.target)
-			o.target.onover(o.target);
-	});
-	canvas.on('mouse:out', function(o) {
-		if (o.target !== undefined && 'onout' in o.target)
-			o.target.onout(o.target);
-	});
-
 	/* Edit mode */
 	var is_down = false;
 	var selected = null;
@@ -330,6 +321,33 @@ function floorplan(canvas, sensorino_state) {
 			o.target.viewmode_onclick(o.target);
 			return;
 		}
+	}
+
+	var over = null;
+	function view_mode_mouse_over(o) {
+		if (o.target !== undefined && 'viewmode_onover' in o.target) {
+			o.target.viewmode_onover(o.target);
+			over = o;
+		}
+	}
+
+	function view_mode_mouse_out(o) {
+		if (o.target !== undefined && 'viewmode_onout' in o.target)
+			o.target.viewmode_onout(o.target);
+		over = null;
+	}
+
+	function edit_mode_mouse_over(o) {
+		if (o.target !== undefined && 'onover' in o.target) {
+			o.target.onover(o.target);
+			over = o;
+		}
+	}
+
+	function edit_mode_mouse_out(o) {
+		if (o.target !== undefined && 'onout' in o.target)
+			o.target.onout(o.target);
+		over = null;
 	}
 
 	function edit_mode_mouse_down(o) {
@@ -579,15 +597,28 @@ function floorplan(canvas, sensorino_state) {
 		canvas.off('mouse:down')
 		canvas.off('mouse:move')
 		canvas.off('mouse:up')
+		canvas.off('mouse:over')
+		canvas.off('mouse:out')
 		canvas.off('object:modified')
 		canvas.off('selection:cleared');
 
+		if (over !== null) {
+			if (mode === 'view')
+				view_mode_mouse_out(over);
+			else if (mode === 'edit')
+				edit_mode_mouse_out(over);
+		}
+
 		if (to === 'view') {
 			canvas.on('mouse:down', view_mode_mouse_down);
+			canvas.on('mouse:over', view_mode_mouse_over);
+			canvas.on('mouse:out', view_mode_mouse_out);
 		} else if (to === 'edit') {
 			canvas.on('mouse:down', edit_mode_mouse_down);
 			canvas.on('mouse:move', edit_mode_mouse_move);
 			canvas.on('mouse:up', edit_mode_mouse_up);
+			canvas.on('mouse:over', edit_mode_mouse_over);
+			canvas.on('mouse:out', edit_mode_mouse_out);
 			canvas.on('object:modified', edit_mode_modified);
 			canvas.on('selection:cleared', edit_mode_deselected);
 		}

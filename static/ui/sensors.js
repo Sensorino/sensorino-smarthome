@@ -2,6 +2,7 @@
 
 function sensor_text(state, canvas, elem) {
 	var channel = elem.channels[0];
+	var value = null;
 
 	elem.obj = new fabric.Text('', {
 		fontFamily: 'Times', /* TODO: style */
@@ -10,13 +11,25 @@ function sensor_text(state, canvas, elem) {
 		originY: 'center',
 	});
 
-	function update(val) {
-		var content = '' + (val !== null ? val : channel);
+	function update(new_val) {
+		value = new_val;
+
+		var content = '' + (value !== null ? value : channel);
 
 		elem.obj.setText(content);
 		canvas.renderAll();
 	}
 	this.update = update;
+
+	/* TODO: move everything below (and more) to base class */
+
+	elem.obj.viewmode_onover = function(o) {
+		set_tip('Sensor channel ' + state.format_channel(channel) +
+			', current value: ' + value, 'sensor');
+	};
+	elem.obj.viewmode_onout = function(o) {
+		clear_tip('sensor');
+	};
 
 	/* TODO: move to base class */
 	state.subscribe(channel, function(path, oldval, newval) { update(newval); });
@@ -25,6 +38,7 @@ function sensor_text(state, canvas, elem) {
 
 function sensor_switch(state, canvas, elem) {
 	var channel = elem.channels[0];
+	var value = null;
 
 	var path0 = new fabric.Path('M0,-10V10', {
 		strokeWidth: 20,
@@ -61,16 +75,28 @@ function sensor_switch(state, canvas, elem) {
 		originY: 'center',
 	});
 
-	function update(val) {
-		var y = val ? -10 : 10;
-		var o = val === null ? 0.5 : 1;
+	function update(new_val) {
+		value = new_val;
+
+		var y = value ? -10 : 10;
+		var o = value === null ? 0.5 : 1;
 
 		circle.set({ top: y, opacity: o });
 		canvas.renderAll();
 	}
 	this.update = update;
 
-	/* TODO: move to base class */
+	/* TODO: move everything below (and more) to base class */
+
+	elem.obj.viewmode_onover = function(o) {
+		set_tip('Sensor channel ' + state.format_channel(channel) +
+			', current value: ' + (value === null ? 'Unknown' :
+			(value ? 'On' : 'Off')), 'sensor');
+	};
+	elem.obj.viewmode_onout = function(o) {
+		clear_tip('sensor');
+	};
+
 	state.subscribe(channel, function(path, oldval, newval) { update(newval); });
 	update(state.get_channel(channel));
 }
