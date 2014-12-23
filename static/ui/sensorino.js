@@ -207,7 +207,7 @@ sensorino_state.prototype.get_channel_lists = function() {
 					continue;
 
 				var publish_cnt = Object.keys(svc[type]).length; /* TODO: use max idx */
-				if ('_publich_count_' + type in svc)
+				if ('_publish_count_' + type in svc)
 					publish_cnt = svc['_publish_count_' + type]
 
 				for (var chan_id in svc[type]) {
