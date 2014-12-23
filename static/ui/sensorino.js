@@ -171,6 +171,57 @@ sensorino_state.prototype.get_channel = function(addr) {
 	return null;
 }
 
+sensorino_state.prototype.set_channel = function(addr, value, done) {
+	try {
+		/* TODO: validate type and/or convert */
+
+		var node_addr = parseInt(addr[0]);
+		var svc_id = parseInt(addr[1]);
+		var type_name = addr[2];
+		var channel_id = parseInt(addr[3]);
+
+		var all_values = [];
+		for (var ch = 0; ch < channel_id; ch++) {
+			var ch_addr = [ node_addr, svc_id, type_name, ch ];
+			var new_val = this.get_channel(ch_addr);
+			if (new_val === null)
+				throw 'Must retrieve value for channel ' + ch_addr + ' first.';
+
+			all_values.push(new_val);
+		}
+
+		if (all_values.length)
+			all_values.push(value);
+		else
+			all_values = value;
+
+		var options = {
+			url: '/api/console.json',
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: { to: node_addr, type: 'set', serviceId: svc_id },
+		};
+		options.body[type_name] = all_values;
+
+		function set_error(err) {
+			if (err.statusCode === undefined)
+				done('Can\'t connect');
+			else if (err.body.length)
+				done('Server message: ' + err.body);
+			else
+				done('Error ' + err.statusCode + ' sending the SET message.');
+		}
+
+		function set_done() {
+			done(true);
+		}
+
+		oboe(options).fail(set_error).done(set_done);
+	} catch(e) {
+		done(e);
+	}
+}
+
 sensorino_state.prototype.get_channel_list = function() {
 	var channels = [];
 

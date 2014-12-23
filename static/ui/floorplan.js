@@ -324,6 +324,14 @@ function floorplan(canvas, sensorino_state) {
 		this_obj.update_unused_services();
 	}
 
+	function view_mode_mouse_down(o) {
+		/* Is something interactive being clicked on? */
+		if (o.target !== undefined && 'viewmode_onclick' in o.target) {
+			o.target.viewmode_onclick(o.target);
+			return;
+		}
+	}
+
 	function edit_mode_mouse_down(o) {
 		/* Is an object being edited through Fabric.js controls? */
 		if (canvas.getActiveObject() !== null || skip_mouse_down) {
@@ -571,7 +579,9 @@ function floorplan(canvas, sensorino_state) {
 		canvas.off('object:modified')
 		canvas.off('selection:cleared');
 
-		if (to === 'edit') {
+		if (to === 'view') {
+			canvas.on('mouse:down', view_mode_mouse_down);
+		} else if (to === 'edit') {
 			canvas.on('mouse:down', edit_mode_mouse_down);
 			canvas.on('mouse:move', edit_mode_mouse_move);
 			canvas.on('mouse:up', edit_mode_mouse_up);
@@ -766,7 +776,7 @@ floorplan.prototype.query_channels = function(reqs, is_actuator) {
 	var channels = [];
 	var all = this.sensorino_state.get_channel_lists()[is_actuator ? 1 : 0];
 
-  /* .indexOf() won't work for checking if a channel is present in "all"
+	/* .indexOf() won't work for checking if a channel is present in "all"
 	 * because it uses pointer comparison.  We could use .find or .includes/
 	 * .contains() and they polyfills from MDN but probably it's simplest
 	 * and possibly faster to use an object.
@@ -774,7 +784,7 @@ floorplan.prototype.query_channels = function(reqs, is_actuator) {
 	var all_map = {};
 	all.forEach(function(chan) { all_map[chan] = chan; });
 
-  /* Get a list of unused channels of the type indicated by is_actuator */
+ 	/* Get a list of unused channels of the type indicated by is_actuator */
 	this.unused.forEach(function(chan) {
 			if (chan in all_map)
 				unused.push(chan);
@@ -783,7 +793,7 @@ floorplan.prototype.query_channels = function(reqs, is_actuator) {
 	for (var i = 0; i < reqs.length; i++) {
 		var msg = 'TODO: proper UI with a nice clickable list of all ' +
 			'services, with the ones yet unused highlighted in bold.\n\n' +
-			'Please select a ' + (is_actuator ? 'actuator' : 'sensor') +
+			'Please select ' + (is_actuator ? 'an actuator' : 'a sensor') +
 			' data channel to be used as input channel ' + (i + 1) +
 			' of ' + reqs.length + ' required by this widget.  The following ' +
 			'type is expected: ' + reqs[i] + '\n\nThe following channels are ' +

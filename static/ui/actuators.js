@@ -53,7 +53,14 @@ function actuator_switch(state, canvas, elem) {
 	elem.obj.viewmode_onclick = function(o) {
 		document.getElementById('tip').textContent = 'Sending new value…';
 
-		state.set(channel, !value);
+		state.set_channel(channel, !value, function(result) {
+			if (result === true)
+				document.getElementById('tip').textContent = 'Action executed.';
+			else {
+				document.getElementById('tip').textContent = 'Action failed.';
+				alert('Sending new value failed: ' + result);
+			}
+		});
 	};
 
 	/* TODO: move to base class */
