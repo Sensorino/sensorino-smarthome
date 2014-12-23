@@ -341,7 +341,7 @@ class sensorino_state():
 	def unsubscribe_changes(self, handler):
 		self.change_handlers.remove(handler)
 
-	def enqueue(self, msg, callback, change_set):
+	def enqueue(self, msg, callback):
 		'''Save the message to the pending-op queue so we can
 		track the success status of this operation.  But first
 		check if another unconfirmed message is there.'''
@@ -360,9 +360,19 @@ class sensorino_state():
 		if addr in self.state:
 			state = copy.deepcopy(self.state[addr])
 
-		self.pending[addr] = ( msg, callback, state, change_set )
+		self.pending[addr] = ( msg, callback, state, set() )
 		self.last_addr = addr
 		# TODO: Set a timeout?  assume success if timeout expired
+
+	def queued_change_set(self, change_set):
+		'''After enqueue has been called, this function can be
+		used to additionally save information about the set of
+		changes occuring since the last saved state, so that it
+		doesn't need to be recalculated when the state is being
+		reverted.'''
+
+		saved = self.pending[self.last_addr][3]
+		saved |= change_set
 
 	def queued_success(self, addr):
 		'''Clear the queue of pending transaction-like requests
@@ -733,7 +743,7 @@ class sensorino_state():
 		# TODO: save the full message to the database with an
 		# additional 'success' field to be cleared on error
 
-		self.enqueue(msg, callback, set())
+		self.enqueue(msg, callback)
 
 		# There's no specific action that we need to take on
 		# this.
@@ -744,9 +754,11 @@ class sensorino_state():
 
 		addr = addr_from_msg(msg, 'to')
 
+		self.enqueue(msg, callback)
+
 		change_set = self.update_state(msg, addr, True)
 
-		self.enqueue(msg, callback, change_set)
+		self.queued_change_set(change_set)
 
 	def handle_invalid_incoming(self, msg):
 		# TODO: save the full message to the database
