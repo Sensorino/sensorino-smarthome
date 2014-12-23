@@ -372,15 +372,16 @@ function floorplan(canvas, sensorino_state) {
 
 				ctx_menu = new menu('line', selected, canvas, selected,
 						lmenu, function() { ctx_menu = null; });
-			} else if (selected.type === 'tx') {
-				ctx_menu = new menu('text', selected, canvas, selected,
-						text_menu, function() { ctx_menu = null; });
-			} else if (selected.type === 'se') {
-				ctx_menu = new menu('sensor', selected, canvas, selected,
-						sensor_menu, function() { ctx_menu = null; });
-			} else if (selected.type === 'ac') {
-				ctx_menu = new menu('actuator', selected, canvas, selected,
-						actuator_menu, function() { ctx_menu = null; });
+			} else if (selected.type in { tx: 0, se: 0, ac: 0 }) {
+				var obj_menu =
+					(selected.type === 'tx' ? text_menu :
+					(selected.type === 'se' ? sensor_menu :
+					actuator_menu));
+
+				ctx_menu = new menu(selected.type, selected, canvas, selected,
+						obj_menu, function() { ctx_menu = null; });
+
+				set_tip('Click on this object again to select.');
 			}
 
 			/* TODO: possibly a pt menu on mouse:up:
