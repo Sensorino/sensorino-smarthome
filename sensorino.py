@@ -577,6 +577,10 @@ class sensorino_state():
 				service_state[prop_name] = accept_by_type[typ]
 				changed = True
 
+		if '_discovered' not in service_state:
+			service_state['_discovered'] = True
+			changed = True
+
 		return changed
 
 	def update_state(self, msg, addr, is_set):
@@ -678,6 +682,14 @@ class sensorino_state():
 			handle_field(field, valuelist_from_msg(msg, field))
 		if len(service_ids):
 			handle_field('serviceId', service_ids)
+
+		# Special case: Service ID 0 publish messages are the node
+		# description messages.  If we receive one, the node is
+		# node "discovered".
+		if main_service_id == 0 and not is_set and \
+				'_discovered' not in node_state:
+			node_state['_discovered'] = True
+			changes.append(( addr, '_discovered' ))
 
 		# Make it a set
 		change_set = set(changes)

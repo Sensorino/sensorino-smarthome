@@ -18,6 +18,7 @@ import sensorino
 import config
 import base_server
 import api_server
+import discovery
 
 import json
 import socket
@@ -191,14 +192,34 @@ def httpd_request_handler(raw_req, conn):
 
 	console.handle_line(False, valid, raw_req, timestamp)
 
+def discovery_request_handler(req):
+	global state, base_server, console
+
+	timestamp = time.time()
+
+	if len(base_server.bases) == 0:
+		# Bad luck -- the base must have *just* disconnected
+
+		# TODO: possibly store the query somewhere and re-emit
+		# as soon as a new base is connected.  Or just call
+		# something like discovery_agent.run().
+
+		return
+
+	req_str = json.dumps(req)
+
+	# TODO: actually send the message out
+
 state = sensorino.sensorino_state()
 console = console_log()
+discovery_agent = discovery.agent(state)
 
 httpd = api_server.sensorino_httpd_server(config.httpd_address, state, console)
 base_server = base_server.sensorino_base_server(config.base_server_address)
 
 base_server.subscribe_objs(base_message_handler)
 httpd.subscribe_user_reqs(httpd_request_handler)
+discovery_agent.subscribe_reqs(discovery_request_handler)
 
 httpd_sn = httpd.socket.getsockname()
 base_sn = base_server.socket.getsockname()
