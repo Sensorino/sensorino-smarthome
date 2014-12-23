@@ -103,9 +103,9 @@ def base_message_handler(raw_msg, base):
 		# Basic validation
 		if 'type' not in msg and 'error' not in msg:
 			raise Exception('No type')
-		type = msg.get('type', 'error')
+		type = msg.get('type', 'err')
 
-		if type not in [ 'publish', 'error' ]:
+		if type not in [ 'publish', 'err' ]:
 			raise Exception('Unknown type')
 
 		if type == 'publish':
