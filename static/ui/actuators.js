@@ -2,7 +2,7 @@
 
 function actuator_switch(state, canvas, elem) {
 	var channel = elem.channels[0];
-	var value = null;
+	var value = 'dummy';
 
 	var path0 = new fabric.Path('M0,-10V10', {
 		strokeWidth: 20,
@@ -40,6 +40,7 @@ function actuator_switch(state, canvas, elem) {
 	});
 
 	function update(new_val) {
+		var old_val = value;
 		value = new_val;
 
 		var y = value ? -10 : 10;
@@ -47,6 +48,9 @@ function actuator_switch(state, canvas, elem) {
 
 		circle.set({ top: y, opacity: o });
 		canvas.renderAll();
+
+		if (old_val !== 'dummy')
+			start_echo(canvas.getElement(), elem.obj.getBoundingRect());
 	}
 	this.update = update;
 
@@ -72,12 +76,14 @@ function actuator_switch(state, canvas, elem) {
 			(!value ? 'on.' : 'off.'), 'actuator');
 
 		circle.set({ radius: 9 });
+		/*path0.set({ strokeWidth: 17 });*/
 		canvas.renderAll();
 	};
 	elem.obj.viewmode_onout = function(o) {
 		clear_tip('actuator');
 
 		circle.set({ radius: 8 });
+		/*path0.set({ strokeWidth: 20 });*/
 		canvas.renderAll();
 	};
 

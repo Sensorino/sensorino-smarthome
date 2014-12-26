@@ -85,6 +85,36 @@ function clear_tip(tipid) {
   /* For now ignore the tipid, clear all */
   document.getElementById('tip').textContent = '';
 }
+
+function start_echo(element, position) {
+  /* Check if the element is visible. */
+  var style = window.getComputedStyle(element);
+  if (style.visibility == 'hidden' || style.display == 'none')
+    /* Try finding corresponding "choice" button and use that as echo source? */
+    return null;
+
+  var pos = element.getBoundingClientRect();
+
+  var echo = document.createElement('div');
+  echo.style.left = pos.left + position.left + 'px';
+  echo.style.width = position.width + 'px';
+  echo.style.top = pos.top + position.top + 'px';
+  echo.style.height = position.height + 'px';
+
+  echo.addEventListener('animationend', function(e) {
+    document.body.removeChild(echo);
+  }, false);
+
+  echo.classList.add('echo-start');
+  document.body.appendChild(echo);
+
+  return echo;
+}
+
+function stop_echo(echo) {
+  if (echo !== null && echo.parentElement !== null)
+    echo.parentElement.removeChild(echo);
+}
   ]]></script>
   <link rel="stylesheet" href="style/ui.css" />
   <link rel="stylesheet" href="style/hljs.css" />
