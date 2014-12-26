@@ -39,7 +39,7 @@ function sensorino_console() {
 
 		/* Remove very old lines */
 		while (lines.length > 100) {
-			var line_rec = lines.unshift();
+			var line_rec = lines.shift();
 			for (var i = 1; i < line_rec.length; i++)
 				output_obj.removeChild(line_rec[i]);
 		}
