@@ -9,13 +9,13 @@ function sensorino_state() {
 
 	this.special_services = { "0": "Service Manager", "1": "Rule Engine" };
 
-	function notify(path, oldval, newval) {
+	function notify(path, oldval, newval, err) {
 		var cbs = this_obj.listeners[path] || [];
 
-		cbs.forEach(function(cb) { cb(path, oldval, newval); });
+		cbs.forEach(function(cb) { cb(path, oldval, newval, err); });
 	}
 
-	function update_all(path, state, parent, update) {
+	function update_all(path, state, parent, update, err) {
 		var path_elem = path[path.length - 1];
 
 		/* Check if we need to recurse */
@@ -26,7 +26,7 @@ function sensorino_state() {
 		if (old_recurse) {
 			function check_old(val, key) {
 				update_all(path.concat([ key ]), val, state,
-						(new_recurse && key in update) ? update[key] : null);
+						(new_recurse && key in update) ? update[key] : null, err);
 				visited[key] = null;
 			}
 
@@ -42,7 +42,7 @@ function sensorino_state() {
 			var newval = new_recurse ? null : update;
 
 			if (oldval !== newval) /* Do we want to use != here? */
-				notify(path, oldval, newval);
+				notify(path, oldval, newval, err);
 
 			if (update === null)
 				delete parent[path_elem];
@@ -55,7 +55,7 @@ function sensorino_state() {
 		if (new_recurse) {
 			function check_new(val, key) {
 				if (!(key in visited))
-					update_all(path.concat([ key ]), null, state, val);
+					update_all(path.concat([ key ]), null, state, val, err);
 			}
 
 			if (update instanceof Object)
@@ -79,7 +79,7 @@ function sensorino_state() {
 			return;
 		}
 
-		update_all([], this.nodes, null, state);
+		update_all([], this_obj.nodes, null, state, false);
 	}
 
 	function handle_event(obj) {
@@ -89,6 +89,16 @@ function sensorino_state() {
 
 			this_obj.update_listeners.forEach(function(cb) { cb(); });
 			return;
+		}
+
+		/*
+		 * Special case: first element equal to "error" means all events are
+		 * result of an asynchronous error.
+		 */
+		var err = false;
+		if (obj.length && obj[0] === "error") {
+			err = true;
+			obj = obj.slice(1);
 		}
 
 		/* Now we know this is an event -- a list of state elements that changed */
@@ -111,7 +121,7 @@ function sensorino_state() {
 
 			var path_elem = path[path.length - 1];
 			update_all(path, path_elem in state_elem ? state_elem[path_elem] : null,
-					state_elem, update);
+					state_elem, update, err);
 		}
 
 		this_obj.update_listeners.forEach(function(cb) { cb(); });

@@ -3,6 +3,7 @@
 function actuator_switch(state, canvas, elem) {
 	var channel = elem.channels[0];
 	var value = 'dummy';
+	var echo_id = null;
 
 	var path0 = new fabric.Path('M0,-10V10', {
 		strokeWidth: 20,
@@ -39,7 +40,7 @@ function actuator_switch(state, canvas, elem) {
 		originY: 'center',
 	});
 
-	function update(new_val) {
+	function update(new_val, err) {
 		var old_val = value;
 		value = new_val;
 
@@ -49,8 +50,27 @@ function actuator_switch(state, canvas, elem) {
 		circle.set({ top: y, opacity: o });
 		canvas.renderAll();
 
-		if (old_val !== 'dummy')
-			start_echo(canvas.getElement(), elem.obj.getBoundingRect());
+		if (old_val !== 'dummy' && !err)
+			echo_id = start_echo(canvas.getElement(), elem.obj.getBoundingRect());
+		else if (echo_id !== null) {
+			if (err)
+				stop_echo(echo_id)
+			echo_id = null;
+		}
+
+		if (err)
+			/*
+			 * Work around an issue that seems to be a combination of Firefox 28,
+			 * Oboe streaming of multiple simultaneous streams and the use of
+			 * alert().
+			 */
+			setTimeout(function() {
+					alert('Remote end reported an error after your last Switch ' +
+						'operation.  Please see the console panel to inspect the error ' +
+						'message contents.');
+				}, 200);
+		/* Might wanna make sure we only show one alert() per unit of time or
+		 * something similar to Linux printk_ratelimit().  */
 	}
 	this.update = update;
 
@@ -87,7 +107,9 @@ function actuator_switch(state, canvas, elem) {
 		canvas.renderAll();
 	};
 
-	state.subscribe(channel, function(path, oldval, newval) { update(newval); });
+	state.subscribe(channel, function(path, oldval, newval, err) {
+			update(newval, err);
+		});
 	update(state.get_channel(channel));
 }
 

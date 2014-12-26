@@ -81,7 +81,7 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 		chunk = chunk.encode('utf-8')
 		self.wfile.write(hex(len(chunk))[2:] + '\r\n' + chunk + '\r\n')
 
-	def handle_sensorino_state_change(self, change_set):
+	def handle_sensorino_state_change(self, change_set, error=False):
 		# Find out the minimum set of changes covering events
 		# in all the set.  Go through the list of events from
 		# shortest (most general) to longest, only add the event
@@ -107,6 +107,9 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 			return False
 
 		chg_data = []
+		if error:
+			chg_data.append('error')
+
 		state = self.server.state.get_state_tree()
 		for pre in prefixes:
 			obj = state

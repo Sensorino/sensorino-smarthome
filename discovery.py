@@ -80,7 +80,7 @@ class agent():
 		for handler in self.req_handlers:
 			handler(msg)
 
-	def handle_sensorino_state_change(self, change_set):
+	def handle_sensorino_state_change(self, change_set, error=False):
 		# TODO: once we have timer support, add delays between
 		# consecutive requests and between a publish and a request
 

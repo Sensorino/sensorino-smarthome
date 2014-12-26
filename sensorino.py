@@ -417,7 +417,7 @@ class sensorino_state():
 			# care of this for us...
 			if len(change_set):
 				for handler in self.change_handlers:
-					handler(change_set)
+					handler(change_set, error=True)
 
 		if prev_callback is not None:
 			prev_callback(prev_msg, 'error', msg)
@@ -736,6 +736,9 @@ class sensorino_state():
 			addr = addr_from_msg(msg, 'from')
 		else:
 			addr = self.last_addr
+
+		# TODO: might want to inspect serviceId, if present, and
+		# match it to what we have in the queue.
 
 		self.queued_failure(addr)
 
