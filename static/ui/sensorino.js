@@ -38,24 +38,15 @@ function sensorino_state() {
 		}
 
 		if (!old_recurse || !new_recurse) {
+			var oldval = old_recurse ? null : state;
+			var newval = new_recurse ? null : update;
+
 			if (update === null)
 				delete parent[path_elem];
 			else {
 				state = new_recurse ? {} : update;
 				parent[path_elem] = state;
-
-				/*
-				 * Special case: save original node address object because it will
-				 * get stringified when used as an index.  If we use the original
-				 * when converting back to JSON messages, we don't have to worry
-				 * about whether it's a string or an int.
-				 */
-				if (path.length == 1)
-					state['_addr'] = path_elem;
 			}
-
-			var oldval = old_recurse ? null : state;
-			var newval = new_recurse ? null : update;
 
 			if (oldval !== newval) /* Do we want to use != here? */
 				notify(path, oldval, newval, err);
@@ -205,7 +196,7 @@ sensorino_state.prototype.set_channel = function(addr, value, done) {
 
 		var all_values = [];
 		for (var ch = 0; ch < channel_id; ch++) {
-			var ch_addr = [ node_addr_orig, svc_id, type_name, ch ];
+			var ch_addr = [ node_addr, svc_id, type_name, ch ];
 			var new_val = this.get_channel(ch_addr);
 			if (new_val === null)
 				throw 'Must retrieve value for channel ' + ch_addr + ' first.';
@@ -245,6 +236,42 @@ sensorino_state.prototype.set_channel = function(addr, value, done) {
 	}
 }
 
+sensorino_state.prototype.get_svc_channel_counts = function(svc) {
+	var channels = {};
+
+	for (var member in svc) {
+		var type = member;
+		if (member[0] == '_') {
+			if (member.startsWith('_publish_count_'))
+				type = member.substr('_publish_count_'.length);
+			else if (member.startsWith('_accept_count_'))
+				type = member.substr('_accept_count_'.length);
+			else
+				continue;
+		}
+
+		if (type in channels)
+			continue;
+
+		var chan_cnt = 0;
+		if ('_publish_count_' + type in svc && '_accept_count_' + type in svc)
+			var chan_cnt = svc['_publish_count_' + type] +
+				svc['_accept_count_' + type];
+
+		for (var chan_id in svc[type])
+			if (parseInt(chan_id) <= chan_cnt)
+				chan_cnt = parseInt(chan_id) + 1;
+
+		var publish_cnt = chan_cnt;
+		if ('_publish_count_' + type in svc)
+			publish_cnt = svc['_publish_count_' + type];
+
+		channels[type] = [ chan_cnt, publish_cnt ];
+	}
+
+	return channels;
+}
+
 sensorino_state.prototype.get_channel_list = function() {
 	var channels = [];
 
@@ -254,13 +281,11 @@ sensorino_state.prototype.get_channel_list = function() {
 		for (var svc_id in nd) {
 			if (svc_id in this.special_services || svc_id[0] == '_')
 				continue;
-			var svc = nd[svc_id];
-			for (var type in svc) {
-				if (type[0] == '_')
-					continue;
-				for (var chan_id in svc[type])
+
+			var chan_cnt = this.get_svc_channel_counts(nd[svc_id]);
+			for (var type in chan_cnt)
+				for (var chan_id = 0; chan_id < chan_cnt[type][0]; chan_id++)
 					channels.push([ node_addr, svc_id, type, chan_id ]);
-			}
 		}
 	}
 
@@ -277,23 +302,15 @@ sensorino_state.prototype.get_channel_lists = function() {
 			if (svc_id in this.special_services || svc_id[0] == '_')
 				continue;
 
-			var svc = nd[svc_id];
-			for (var type in svc) {
-				if (type[0] == '_')
-					continue;
-
-				var publish_cnt = Object.keys(svc[type]).length; /* TODO: use max idx */
-				if ('_publish_count_' + type in svc)
-					publish_cnt = svc['_publish_count_' + type]
-
-				for (var chan_id in svc[type]) {
+			var chan_cnt = this.get_svc_channel_counts(nd[svc_id]);
+			for (var type in chan_cnt)
+				for (var chan_id = 0; chan_id < chan_cnt[type][0]; chan_id++) {
 					var chan = [ node_addr, svc_id, type, chan_id ];
-					if (chan_id < publish_cnt)
+					if (chan_id < chan_cnt[type][1])
 						se_channels.push(chan);
 					else
 						ac_channels.push(chan);
 				}
-			}
 		}
 	}
 
@@ -310,23 +327,14 @@ sensorino_state.prototype.format_channel = function(addr) {
 	var type_str = ' (type: ' + data_type + ')';
 
 	var svc = this.nodes[node_addr][svc_id];
-	var cnt = 0;
-	for (var type in svc)
-		if (type[0] != '_')
-			cnt++;
+	var chan_cnt = this.get_svc_channel_counts(svc);
 
-	if (cnt == 1)
+	if (Object.keys(chan_cnt).length == 1)
 		return str + type_str;
 
 	str += ',' + data_type;
 
-	var channels = svc[data_type];
-	var cnt = 0;
-	for (var chnum in channels)
-		if (chnum[0] != '_')
-			cnt++;
-
-	if (cnt == 1)
+	if (chan_cnt[data_type][0] == 1)
 		return str + type_str;
 
 	str += ',' + channel_id;
@@ -352,13 +360,11 @@ sensorino_state.prototype.parse_channel = function(str) {
 			return null;
 
 		var svc = this.nodes[node_addr_str][svc_id];
-		for (var type in svc) {
-			if (type[0] == '_')
-				continue;
-			if (data_type !== null)
-				return null;	/* If type not given, the service have only one */
+		var chan_cnt = this.get_svc_channel_counts(svc);
+		if (Object.keys(chan_cnt).length != 1)
+			return null;	/* If type not given, the service can have only one */
+		for (var type in chan_cnt)
 			data_type = type;
-		}
 	} else
 		data_type = elems[2];
 
@@ -372,7 +378,7 @@ sensorino_state.prototype.parse_channel = function(str) {
 
 	var node_addr = this.nodes[node_addr_str]._addr;
 	var svc = this.nodes[node_addr_str][svc_id];
-	if (!(data_type in svc))
+	if (!(data_type in svc) && !('_publish_count_' + data_type in svc))
 		return null;
 
 	if (elems.length >= 4)

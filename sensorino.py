@@ -603,7 +603,7 @@ class sensorino_state():
 		# Find the node in question
 		if addr not in self.state:
 			# New node
-			self.state[addr] = {}
+			self.state[addr] = { '_addr': addr }
 			changes.append(( addr, ))
 
 		node_state = self.state[addr]
