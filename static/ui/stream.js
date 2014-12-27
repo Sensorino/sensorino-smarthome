@@ -35,6 +35,11 @@ function stream(url, handler, status) {
 	}
 
 	function start_handler(code, headers) {
+		if (code < 200) {
+			fail_handler('cant-connect');
+			return;
+		}
+
 		clearTimeout(to);
 
 		if (status !== undefined && !online)
