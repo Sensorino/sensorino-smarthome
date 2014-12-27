@@ -159,6 +159,13 @@ button {
   background: #f8a0a0;
 }
 
+#console-view code.in .prefix {
+  color: #777;
+}
+#console-view code.out .prefix {
+  font-weight: bold;
+}
+
 #console-input {
   position: absolute;
   height: 50px;

@@ -21,18 +21,26 @@ function sensorino_console() {
 		 * hint or group messages with headers something like "over 5 minutes ago",
 		 * "over 30 minutes ago", "yesterday", "last week", etc.
 		 */
-		/* TODO: highlight >>> and >>! in bold to differentiate it from <<< */
 
 		var code = document.createElement('code');
-		code.textContent = line;
+		var pref = document.createElement('span');
 
+		pref.textContent = line.substr(0, 4);
+		pref.classList.add('prefix');
+		code.textContent = line.substr(4);
 		code.classList.add('language-json');
+
+		if (line[0] == '>')
+			code.classList.add('out');
+		else if (line[0] == '<')
+			code.classList.add('in');
 		if (line.substr(0, 3).indexOf('!') >= 0)
 			code.classList.add('error');
 
 		var br = document.createElement('br');
 
 		hljs.highlightBlock(code);
+		code.insertBefore(pref, code.firstChild);
 		output_obj.appendChild(code);
 		output_obj.appendChild(br);
 		lines.push([ timestamp, code, br ]);
