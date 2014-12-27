@@ -104,6 +104,9 @@ function start_echo(element, position) {
   echo.addEventListener('animationend', function(e) {
     document.body.removeChild(echo);
   }, false);
+  echo.addEventListener('webkitAnimationEnd', function(e) {
+    document.body.removeChild(echo);
+  }, false);
 
   echo.classList.add('echo-start');
   document.body.appendChild(echo);

@@ -234,6 +234,7 @@ button {
 
 #conn-status {
   font-size: 12pt;
+  font-family: "Verdana";
   color: black;
   background: #ffc;
   padding: 10pt;
@@ -254,9 +255,27 @@ button {
   pointer-events: none; /* There's a polyfill for this somewhere */
 
   animation: echo-anim 2s linear;
+  -webkit-animation: echo-anim 2s linear;
 }
 
 @keyframes echo-anim {
+  from {
+    opacity: 0.5;
+  }
+
+  20% {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 0;
+    left: -1000px;
+    top: -1000px;
+    width: 3000px; /* This won't work great for huge screens, could use vmax */
+    height: 3000px;
+  }
+}
+@-webkit-keyframes echo-anim {
   from {
     opacity: 0.5;
   }

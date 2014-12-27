@@ -476,7 +476,7 @@ function floorplan(canvas, sensorino_state) {
 		 */
 		/* Snap to one of the 8 or more directions depending on the distance */
 		if (len && line.props.to === null) {
-			var num_dirs = 8 << Math.trunc(len / 150);
+			var num_dirs = 8 << Math.floor(len / 150);
 			var dir = atan2 * num_dirs / Math.PI / 2;
 			atan2 = Math.PI * 2 * Math.round(dir) / num_dirs;
 			dx = len * Math.sin(atan2);
@@ -751,10 +751,9 @@ function floorplan(canvas, sensorino_state) {
 	var inited = 0;
 
 	function state_update() {
-		if (inited) {
-			this_obj.update_unused_services();
+		this_obj.update_unused_services();
+		if (inited)
 			return;
-		}
 		inited = 1;
 		oboe('/api/floorplan.json').fail(load_error).done(load_done);
 	}
@@ -918,5 +917,22 @@ floorplan.prototype.register_actuator = function(actuator_class, name, desc) {
 	floorplan.prototype.actuators.push(
 			{ cls: actuator_class, name: name, desc: desc });
 };
+
+/* Polyfills from MDN */
+
+if (!Math.hypot) {
+	Math.hypot = function hypot() {
+		var y = 0;
+		var length = arguments.length;
+
+		for (var i = 0; i < length; i++) {
+			if(arguments[i] === Infinity || arguments[i] === -Infinity) {
+				return Infinity;
+			}
+			y += arguments[i] * arguments[i];
+		}
+		return Math.sqrt(y);
+	};
+}
 /* vim: ts=2:
 */

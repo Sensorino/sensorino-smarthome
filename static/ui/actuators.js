@@ -66,8 +66,8 @@ function actuator_switch(state, canvas, elem) {
 			 */
 			setTimeout(function() {
 					alert('Remote end reported an error after your last Switch ' +
-						'operation.  Please see the console panel to inspect the error ' +
-						'message contents.');
+						'operation.  Please see the Console View panel to inspect the ' +
+						'error message contents.');
 				}, 200);
 		/* Might wanna make sure we only show one alert() per unit of time or
 		 * something similar to Linux printk_ratelimit().  */
