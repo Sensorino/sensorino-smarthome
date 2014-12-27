@@ -38,18 +38,27 @@ function sensorino_state() {
 		}
 
 		if (!old_recurse || !new_recurse) {
-			var oldval = old_recurse ? null : state;
-			var newval = new_recurse ? null : update;
-
-			if (oldval !== newval) /* Do we want to use != here? */
-				notify(path, oldval, newval, err);
-
 			if (update === null)
 				delete parent[path_elem];
 			else {
 				state = new_recurse ? {} : update;
 				parent[path_elem] = state;
+
+				/*
+				 * Special case: save original node address object because it will
+				 * get stringified when used as an index.  If we use the original
+				 * when converting back to JSON messages, we don't have to worry
+				 * about whether it's a string or an int.
+				 */
+				if (path.length == 1)
+					state['_addr'] = path_elem;
 			}
+
+			var oldval = old_recurse ? null : state;
+			var newval = new_recurse ? null : update;
+
+			if (oldval !== newval) /* Do we want to use != here? */
+				notify(path, oldval, newval, err);
 		}
 
 		if (new_recurse) {
@@ -185,14 +194,18 @@ sensorino_state.prototype.set_channel = function(addr, value, done) {
 	try {
 		/* TODO: validate type and/or convert */
 
-		var node_addr = parseInt(addr[0]);
+		/*
+		 * Note: the node addr passed to this function *must* be of the same
+		 * type as should be in final JSON.
+		 */
+		var node_addr = addr[0];
 		var svc_id = parseInt(addr[1]);
 		var type_name = addr[2];
 		var channel_id = parseInt(addr[3]);
 
 		var all_values = [];
 		for (var ch = 0; ch < channel_id; ch++) {
-			var ch_addr = [ node_addr, svc_id, type_name, ch ];
+			var ch_addr = [ node_addr_orig, svc_id, type_name, ch ];
 			var new_val = this.get_channel(ch_addr);
 			if (new_val === null)
 				throw 'Must retrieve value for channel ' + ch_addr + ' first.';
@@ -235,8 +248,9 @@ sensorino_state.prototype.set_channel = function(addr, value, done) {
 sensorino_state.prototype.get_channel_list = function() {
 	var channels = [];
 
-	for (var node_addr in this.nodes) {
-		var nd = this.nodes[node_addr];
+	for (var node_addr_str in this.nodes) {
+		var nd = this.nodes[node_addr_str];
+		var node_addr = nd._addr;
 		for (var svc_id in nd) {
 			if (svc_id in this.special_services || svc_id[0] == '_')
 				continue;
@@ -256,8 +270,9 @@ sensorino_state.prototype.get_channel_list = function() {
 sensorino_state.prototype.get_channel_lists = function() {
 	var ac_channels = [], se_channels = [];
 
-	for (var node_addr in this.nodes) {
-		var nd = this.nodes[node_addr];
+	for (var node_addr_str in this.nodes) {
+		var nd = this.nodes[node_addr_str];
+		var node_addr = nd._addr;
 		for (var svc_id in nd) {
 			if (svc_id in this.special_services || svc_id[0] == '_')
 				continue;
@@ -286,7 +301,7 @@ sensorino_state.prototype.get_channel_lists = function() {
 }
 
 sensorino_state.prototype.format_channel = function(addr) {
-	var node_addr = parseInt(addr[0]);
+	var node_addr = addr[0];
 	var svc_id = parseInt(addr[1]);
 	var data_type = addr[2];
 	var channel_id = parseInt(addr[3]);
@@ -325,18 +340,18 @@ sensorino_state.prototype.parse_channel = function(str) {
 	if (elems.length < 2)
 		return null;
 
-	var node_addr = parseInt(elems[0]);
+	var node_addr_str = elems[0];
 	var svc_id = parseInt(elems[1]);
 	var data_type = null;
 	var channel_id = 0;
 
 	if (elems.length <= 2) {
-		if (!(node_addr in this.nodes))
+		if (!(node_addr_str in this.nodes))
 			return null;
-		if (!(svc_id in this.nodes[node_addr]))
+		if (!(svc_id in this.nodes[node_addr_str]))
 			return null;
 
-		var svc = this.nodes[node_addr][svc_id];
+		var svc = this.nodes[node_addr_str][svc_id];
 		for (var type in svc) {
 			if (type[0] == '_')
 				continue;
@@ -350,11 +365,13 @@ sensorino_state.prototype.parse_channel = function(str) {
 	/* TODO: eventually only check that type name is valid, for now we
 	 * check if given type was already discovered in this service.  */
 
-	if (!(node_addr in this.nodes))
+	if (!(node_addr_str in this.nodes))
 		return null;
-	if (!(svc_id in this.nodes[node_addr]))
+	if (!(svc_id in this.nodes[node_addr_str]))
 		return null;
-	var svc = this.nodes[node_addr][svc_id];
+
+	var node_addr = this.nodes[node_addr_str]._addr;
+	var svc = this.nodes[node_addr_str][svc_id];
 	if (!(data_type in svc))
 		return null;
 
