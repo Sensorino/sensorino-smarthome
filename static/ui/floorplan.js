@@ -163,6 +163,8 @@ function floorplan(canvas, sensorino_state) {
 	/* Canvas functionality */
 	canvas.selection = false;
 
+	var inited = 0;
+
 	/* Edit mode */
 	var is_down = false;
 	var selected = null;
@@ -352,7 +354,7 @@ function floorplan(canvas, sensorino_state) {
 
 	function edit_mode_mouse_down(o) {
 		/* Is an object being edited through Fabric.js controls? */
-		if (canvas.getActiveObject() !== null || skip_mouse_down) {
+		if (canvas.getActiveObject() !== null || !inited || skip_mouse_down) {
 			skip_mouse_down = false;
 			return;
 		}
@@ -724,7 +726,10 @@ function floorplan(canvas, sensorino_state) {
 		this.update_unused_services();
 	};
 
+	/* Launch the floorplan request once the sensorino state is initialised */
 	function load_done(obj) {
+		inited = 1;
+
 		/* TODO: try/catch */
 		this_obj.load_state(obj);
 	}
@@ -747,15 +752,12 @@ function floorplan(canvas, sensorino_state) {
 		 */
 	}
 
-	/* Launch the floorplan request once the sensorino state is initialised */
-	var inited = 0;
-
+	var req = null;
 	function state_update() {
-		this_obj.update_unused_services();
 		if (inited)
-			return;
-		inited = 1;
-		oboe('/api/floorplan.json').fail(load_error).done(load_done);
+			this_obj.update_unused_services();
+		else if (req === null)
+			req = oboe('/api/floorplan.json').fail(load_error).done(load_done);
 	}
 
 	sensorino_state.subscribe_updates(state_update);
