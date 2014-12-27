@@ -627,7 +627,7 @@ function floorplan(canvas, sensorino_state) {
 
 		/* If we're exiting the edit mode, submit new state to server */
 		/* TODO: check if anything has been modified? */
-		if (mode === 'edit' && to !== 'edit') {
+		if (mode === 'edit' && to !== 'edit' && inited) {
 			set_tip('Saving changes…', 'fp-save');
 
 			var options = {
@@ -745,11 +745,6 @@ function floorplan(canvas, sensorino_state) {
 			alert(msg + '\n\nServer returned this: ' + err.body);
 		else
 			alert('Error ' + err.statusCode + '.\n\n' + msg);
-
-		/*
-		 * TODO: make sure saving does not work, else the user may overwrite the
-		 * state on the server and lose data.
-		 */
 	}
 
 	var req = null;
