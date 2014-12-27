@@ -81,6 +81,15 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 		chunk = chunk.encode('utf-8')
 		self.wfile.write(hex(len(chunk))[2:] + '\r\n' + chunk + '\r\n')
 
+	def stream_chromium_workaround(self):
+		ua = self.headers.getheader('user-agent', None)
+		if ua is None or 'WebKit' not in ua:
+			return
+
+		# Chrome/chromium workaround - nothing else seems to work
+		# http://code.google.com/p/chromium/issues/detail?id=2016
+		self.send_stream_chunk('\n' * 32768)
+
 	def handle_sensorino_state_change(self, change_set, error=False):
 		# Find out the minimum set of changes covering events
 		# in all the set.  Go through the list of events from
@@ -171,6 +180,8 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 		self.subscribed_to_changes = 1
 		self.streaming = 1
 
+		self.stream_chromium_workaround()
+
 	def handle_api_console(self):
 		self.check_params([])
 		self.check_method([ 'GET', 'POST' ])
@@ -232,6 +243,8 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 				self.handle_sensorino_console_line)
 		self.subscribed_to_console = 1
 		self.streaming = 1
+
+		self.stream_chromium_workaround()
 
 	def handle_api_floorplan(self):
 		self.check_params([])
