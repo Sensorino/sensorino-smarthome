@@ -324,7 +324,9 @@ def validate_outgoing_set(msg):
 # Note: not basing on asyncore.dispatcher because it doesn't have any timer
 # support
 class sensorino_state():
-	def __init__(self):
+	def __init__(self, storage):
+		self.storage = storage
+
 		self.state = {}
 
 		# One last Set or Request message sent to any node is
@@ -340,6 +342,9 @@ class sensorino_state():
 
 	def unsubscribe_changes(self, handler):
 		self.change_handlers.remove(handler)
+
+	def load(self):
+		self.state = self.storage.get_tree_current()
 
 	def enqueue(self, msg, callback):
 		'''Save the message to the pending-op queue so we can
@@ -360,19 +365,21 @@ class sensorino_state():
 		if addr in self.state:
 			state = copy.deepcopy(self.state[addr])
 
-		self.pending[addr] = ( msg, callback, state, set() )
+		self.pending[addr] = ( msg, callback, state, set(), [] )
 		self.last_addr = addr
 		# TODO: Set a timeout?  assume success if timeout expired
 
-	def queued_change_set(self, change_set):
+	def queued_change_set(self, change_set, ref_list):
 		'''After enqueue has been called, this function can be
 		used to additionally save information about the set of
 		changes occuring since the last saved state, so that it
 		doesn't need to be recalculated when the state is being
 		reverted.'''
 
-		saved = self.pending[self.last_addr][3]
-		saved |= change_set
+		saved_set = self.pending[self.last_addr][3]
+		saved_set |= change_set
+		saved_refs = self.pending[self.last_addr][4]
+		saved_refs += ref_list
 
 	def queued_success(self, addr):
 		'''Clear the queue of pending transaction-like requests
@@ -383,7 +390,8 @@ class sensorino_state():
 			return
 
 		# An operation was pending
-		prev_msg, prev_callback, prev_state, c = self.pending.pop(addr)
+		prev_msg, prev_callback, prev_state, \
+			c, r = self.pending.pop(addr)
 
 		# Notify
 		if prev_callback is not None:
@@ -393,15 +401,12 @@ class sensorino_state():
 		'''Clear the queue of pending transaction-like requests
 		if its not empty.  The transaction failed.'''
 
-		# TODO: mark the failed request's status in the database
-		# as failure
-
 		self.last_addr = None
 
 		if addr not in self.pending:
 			return
 
-		prev_msg, prev_callback, prev_state, change_set = \
+		prev_msg, prev_callback, prev_state, change_set, ref_list = \
 			self.pending.pop(addr)
 
 		# If the failing message is a Set, try to restore the
@@ -418,6 +423,13 @@ class sensorino_state():
 			if len(change_set):
 				for handler in self.change_handlers:
 					handler(change_set, error=True)
+
+			# Mark all of the database records related to
+			# the failing message as unsuccessful.
+			for ref in ref_list:
+				self.storage.mark_saved_value_failure(ref)
+			if ref_list:
+				self.storage.commit()
 
 		if prev_callback is not None:
 			prev_callback(prev_msg, 'error', msg)
@@ -540,7 +552,7 @@ class sensorino_state():
 
 	@staticmethod
 	def update_service_desc(service_state, types, counts):
-		changed = False
+		changes = []
 
 		# The counts are optional, if not present, calculate
 		# from the number of the dataType elements provided.
@@ -577,7 +589,9 @@ class sensorino_state():
 					service_state[prop_name] != \
 					publish_by_type[typ]:
 				service_state[prop_name] = publish_by_type[typ]
-				changed = True
+
+				changes.append(( ( prop_name, ),
+						publish_by_type[typ] ))
 
 		for typ in accept_by_type:
 			prop_name = '_accept_count_' + typ
@@ -585,25 +599,35 @@ class sensorino_state():
 					service_state[prop_name] != \
 					accept_by_type[typ]:
 				service_state[prop_name] = accept_by_type[typ]
-				changed = True
+
+				changes.append(( ( prop_name, ),
+						accept_by_type[typ] ))
 
 		if '_discovered' not in service_state:
 			service_state['_discovered'] = True
 			changed = True
 
-		return changed
+			changes.append(( ( '_discovered', ), True ))
 
-	def update_state(self, msg, addr, is_set):
+		return changes
+
+	def update_state(self, timestamp, msg, addr, is_set):
 		'''Process an incoming or outgoing message such as Publish
 		or Set and see what state changes it implies.  Update our
 		local copy of the state and the database.'''
 
 		changes = []
+		change_refs = []
 
 		# Find the node in question
 		if addr not in self.state:
 			# New node
 			self.state[addr] = { '_addr': addr }
+
+			ref = self.storage.save_value(timestamp,
+					( addr, '_addr' ), addr)
+			change_refs.append(ref)
+
 			changes.append(( addr, ))
 
 		node_state = self.state[addr]
@@ -615,6 +639,7 @@ class sensorino_state():
 		if main_service_id not in node_state:
 			# New service
 			node_state[main_service_id] = {}
+
 			changes.append(( addr, main_service_id ))
 
 		service_state = node_state[main_service_id]
@@ -638,20 +663,24 @@ class sensorino_state():
 
 			for num, val in enumerate(vallist):
 				pos = num + offset
+
 				if pos < len(service_state[datatype]):
 					if val == service_state[datatype][pos]:
 						continue
 					service_state[datatype][pos] = val
-					changes.append(( addr, main_service_id,
-							datatype, num ))
 				else:
 					while len(service_state[datatype]) < \
 							pos:
 						service_state[datatype]. \
 							append(None)
 					service_state[datatype].append(val)
-					changes.append(( addr, main_service_id,
-							datatype, num ))
+
+				path = ( addr, main_service_id, datatype, num )
+				ref = self.storage.save_value(timestamp,
+						path, val)
+				change_refs.append(ref)
+
+				changes.append(path)
 
 		skip = [ 'from', 'to', 'type', 'serviceId'.lower() ]
 		if 'dataType' in msg:
@@ -665,10 +694,15 @@ class sensorino_state():
 			if 'count' in msg:
 				counts = valuelist_from_msg(msg, 'count')
 
-			changed = self.update_service_desc(service_state,
+			desc_changes = self.update_service_desc(service_state,
 					types, counts)
-			if changed:
+			if len(desc_changes):
 				changes.append(( addr, main_service_id ))
+			for subpath, value in desc_changes:
+				ref = self.storage.save_value(timestamp,
+						( addr, main_service_id ) +
+						subpath, value)
+				change_refs.append(ref)
 
 		fields = []
 		for field in msg:
@@ -699,7 +733,14 @@ class sensorino_state():
 		if main_service_id == 0 and not is_set and \
 				'_discovered' not in node_state:
 			node_state['_discovered'] = True
+
+			ref = self.storage.save_value(timestamp,
+					( addr, '_discovered' ), True)
+			change_refs.append(ref)
+
 			changes.append(( addr, '_discovered' ))
+
+		self.storage.commit()
 
 		# Make it a set
 		change_set = set(changes)
@@ -708,7 +749,7 @@ class sensorino_state():
 			for handler in self.change_handlers:
 				handler(change_set)
 
-		return change_set
+		return change_set, change_refs
 
 	# None of the handle_ methods here nor the update_state() above
 	# perform input validation.  All of their messages must first
@@ -720,18 +761,14 @@ class sensorino_state():
 	# about the input message (e.g. presence of a field or value type),
 	# you must include a check in the relevant validate function first.
 
-	def handle_publish(self, msg):
-		# TODO: save the full message to the database
-
+	def handle_publish(self, timestamp, msg):
 		addr = addr_from_msg(msg, 'from')
 
 		self.queued_success(addr)
 
-		self.update_state(msg, addr, False)
+		self.update_state(timestamp, msg, addr, False)
 
-	def handle_error(self, msg):
-		# TODO: save the full message to the database
-
+	def handle_error(self, timestamp, msg):
 		if 'from' in msg:
 			addr = addr_from_msg(msg, 'from')
 		else:
@@ -742,30 +779,23 @@ class sensorino_state():
 
 		self.queued_failure(addr)
 
-	def handle_request(self, msg, callback = None):
-		# TODO: save the full message to the database with an
-		# additional 'success' field to be cleared on error
-
+	def handle_request(self, timestamp, msg, callback = None):
 		self.enqueue(msg, callback)
 
 		# There's no specific action that we need to take on
 		# this.
 
-	def handle_set(self, msg, callback = None):
-		# TODO: save the full message to the database with an
-		# additional 'success' field to be cleared on error
-
+	def handle_set(self, timestamp, msg, callback = None):
 		addr = addr_from_msg(msg, 'to')
 
 		self.enqueue(msg, callback)
 
-		change_set = self.update_state(msg, addr, True)
+		change_set, change_refs = \
+			self.update_state(timestamp, msg, addr, True)
 
-		self.queued_change_set(change_set)
+		self.queued_change_set(change_set, change_refs)
 
-	def handle_invalid_incoming(self, msg):
-		# TODO: save the full message to the database
-
+	def handle_invalid_incoming(self, timestamp, msg):
 		if 'from' in msg:
 			addr = addr_from_msg(msg, 'from')
 		else:
@@ -774,9 +804,7 @@ class sensorino_state():
 		# Questionable.. but assume failure if timeout not expired
 		self.queued_failure(addr)
 
-	def handle_invalid_outgoing(self, msg):
-		# TODO: save the full message to the database
-
+	def handle_invalid_outgoing(self, timestamp, msg):
 		try:
 			addr = addr_from_msg(msg, 'to')
 		except:

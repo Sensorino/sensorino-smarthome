@@ -19,6 +19,7 @@ import config
 import base_server
 import api_server
 import discovery
+import db
 
 import json
 import socket
@@ -43,13 +44,13 @@ import time
 import asyncore
 
 class console_log():
-	# TODO: database support
-
 	# Keep this many lines of most recent log data to be present
 	# in memory and served without querying the database.
 	n = 30
 
-	def __init__(self):
+	def __init__(self, storage):
+		self.storage = storage
+
 		self.last_n = []
 
 		self.line_handlers = []
@@ -80,9 +81,16 @@ class console_log():
 		self.last_n.append(line)
 		self.last_n = self.last_n[-self.n:]
 
+		# Save to persistent storage
+		self.storage.save_console_line(*line)
+		self.storage.commit()
+
 		# Notify our subscribers
 		for handler in self.line_handlers:
 			handler(line)
+
+	def load(self):
+		self.last_n = self.storage.get_console_current()[-self.n:]
 
 	def get_recent_lines(self):
 		return self.last_n
@@ -127,13 +135,13 @@ def base_message_handler(raw_msg, base):
 			type = msg.get('type', 'err')
 
 			if type == 'publish':
-				state.handle_publish(msg)
+				state.handle_publish(timestamp, msg)
 			else:
-				state.handle_error(msg)
+				state.handle_error(timestamp, msg)
 		else:
 			# If it parses, submit it to the state handler anyway
 			msg = sensorino.message_dict(json.loads(raw_msg))
-			state.handle_invalid_incoming(msg)
+			state.handle_invalid_incoming(timestamp, msg)
 	except Exception as e:
 		if valid:
 			sensorino.log_warn(str(e.args))
@@ -174,17 +182,17 @@ def httpd_request_handler(raw_req, conn):
 		if type == 'set':
 			sensorino.validate_outgoing_set(msg)
 			state.validate_outgoing_set(msg)
-			state.handle_set(msg)
+			state.handle_set(timestamp, msg)
 		else:
 			sensorino.validate_outgoing_request(msg)
-			state.handle_request(msg)
+			state.handle_request(timestamp, msg)
 
 		valid = True
 	except Exception as e:
 		sensorino.log_warn(str(e.args))
 
 		# If it parses, submit it to the state handler anyway
-		state.handle_invalid_outgoing(msg)
+		state.handle_invalid_outgoing(timestamp, msg)
 
 		valid = False
 
@@ -217,13 +225,13 @@ def discovery_request_handler(req):
 	# If valid, send to the state keeping object for tracking.
 	try:
 		sensorino.validate_outgoing_request(req)
-		state.handle_request(req)
+		state.handle_request(timestamp, req)
 
 		valid = True
 	except Exception as e:
 		sensorino.log_warn(str(e.args))
 
-		state.handle_invalid_outgoing(req)
+		state.handle_invalid_outgoing(timestamp, req)
 
 		valid = False
 
@@ -240,12 +248,20 @@ def discovery_request_handler(req):
 
 	console.handle_line(False, valid, req_str, timestamp)
 
-state = sensorino.sensorino_state()
-console = console_log()
+# Create and introduce all the helpers to each other
+db = db.connection()
+state = sensorino.sensorino_state(db)
+console = console_log(db)
 discovery_agent = discovery.agent(state)
 
-httpd = api_server.sensorino_httpd_server(config.httpd_address, state, console)
+httpd = api_server.sensorino_httpd_server(config.httpd_address,
+		state, console, db)
 base_server = base_server.sensorino_base_server(config.base_server_address)
+
+state.load()
+console.load()
+httpd.load_floorplan()
+print("State loaded from the database")
 
 base_server.subscribe_objs(base_message_handler)
 httpd.subscribe_user_reqs(httpd_request_handler)
@@ -261,3 +277,4 @@ try:
 	asyncore.loop()
 except KeyboardInterrupt:
 	pass
+db.close()

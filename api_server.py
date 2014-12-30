@@ -17,6 +17,7 @@ import posixpath
 import cgi
 import collections
 import os
+import time
 
 class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 	protocol_version = 'HTTP/1.1' # Enable keep-alive
@@ -268,10 +269,22 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 
 		if self.command == 'POST':
 			content = self.post_get_json(128 * 1024)
+			obj = None
+			timestamp = time.time()
+
+			# Try to ensure nothing is saved when either
+			# parsing or the database return an error
 			try:
-				self.server.floorplan = json.loads(content)
+				obj = json.loads(content)
 			except Exception as e:
 				raise Exception(400, 'Bad JSON: ' + e.args[0])
+			try:
+				self.server.storage.save_floorplan_version(
+						timestamp, content)
+				self.server.storage.commit()
+				self.server.floorplan = obj
+			except Exception as e:
+				raise Exception(400, 'DB error: ' + e.args[0])
 
 			self.send_response(200)
 			self.send_header("Content-Type", "application/json")
@@ -321,12 +334,13 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 				raise
 
 class sensorino_httpd_server(medusaserver.Server):
-	def __init__(self, addr, sensorino_state, sensorino_console):
+	def __init__(self, addr, sensorino_state, sensorino_console, storage):
 		medusaserver.Server.__init__(self, addr[0], addr[1], \
 				sensorino_httpd_request_handler)
 		self.state = sensorino_state
 		self.console = sensorino_console
-		# TODO: use a floorplan_store object
+		self.storage = storage
+
 		self.floorplan = []
 
 		self.conns = []
@@ -344,3 +358,10 @@ class sensorino_httpd_server(medusaserver.Server):
 	def handle_user_req(self, raw_req, conn):
 		for handler in self.user_req_handlers:
 			handler(raw_req, conn)
+
+	def load_floorplan(self):
+		latest = self.storage.get_floorplan_current()
+		if latest is None:
+			self.floorplan = []
+		else:
+			self.floorplan = json.loads(latest)
