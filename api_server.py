@@ -69,6 +69,24 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 		if ctype not in ctypes:
 			raise Exception(415, 'Unsupported content type')
 
+	time_params = [ 'at', 'ago' ]
+
+	def parse_time_params(self):
+		if 'at' in self.params and 'ago' in self.params:
+			raise Exception(400, 'Either at= or ago= parameter ' +
+					'may be given but not both.')
+
+		try:
+			if 'at' in self.params:
+				return float(self.params['at'])
+
+			if 'ago' in self.params:
+				return time.time() - float(self.params['ago'])
+
+			return None
+		except:
+			raise Exception(400, e.args[0])
+
 	def post_get_json(self, limit):
 		self.check_ctype([ 'application/json' ])
 
@@ -143,14 +161,18 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 		self.send_stream_chunk(content)
 
 	def handle_api_sensorino(self):
-		self.check_params([])
+		self.check_params(self.time_params)
 		self.check_method([ 'GET' ])
 
-		# TODO: in the future will need to handle a few params
-		# to provide historical states.
+		timestamp = self.parse_time_params()
 
-		content = json.dumps(self.server.state.get_state_tree()). \
-			encode('utf-8')
+		if timestamp is None:
+			ret = self.server.state.get_state_tree()
+		else:
+			ret = self.server.state. \
+				get_state_at_timestamp(timestamp)
+
+		content = json.dumps(ret).encode('utf-8')
 
 		self.send_response(200)
 		self.send_header("Content-Type", "application/json")
@@ -184,16 +206,19 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 		self.stream_chromium_workaround()
 
 	def handle_api_console(self):
-		self.check_params([])
 		self.check_method([ 'GET', 'POST' ])
 
-		# TODO: in the future will need to handle a GET with a few
-		# params to provide historical states.
-
 		if self.command == 'GET':
-			content = json.dumps(
-				self.server.console.get_recent_lines()). \
-				encode('utf-8')
+			self.check_params(self.time_params)
+			timestamp = self.parse_time_params()
+
+			if timestamp is None:
+				ret = self.server.console.get_recent_lines()
+			else:
+				ret = self.server.console. \
+					get_lines_at_timestamp(timestamp)
+
+			content = json.dumps(ret).encode('utf-8')
 
 			self.send_response(200)
 			self.send_header("Content-Type", "application/json")
@@ -205,6 +230,8 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 			return
 
 		if self.command == 'POST':
+			self.check_params([])
+
 			line = self.post_get_json(256)
 			try:
 				self.server.handle_user_req(line, self)
@@ -248,15 +275,21 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 		self.stream_chromium_workaround()
 
 	def handle_api_floorplan(self):
-		self.check_params([])
 		self.check_method([ 'GET', 'POST' ])
 
-		# TODO: in the future will need to handle a GET with a few
-		# params to provide historical states.
-
 		if self.command == 'GET':
-			content = json.dumps(self.server.floorplan). \
-				encode('utf-8')
+			self.check_params(self.time_params)
+			timestamp = self.parse_time_params()
+
+			if timestamp is None:
+				ret = self.server.floorplan
+			else:
+				ret = self.server.storage. \
+					get_floorplan_at_timestamp(timestamp)
+				if ret is None:
+					ret = []
+
+			content = json.dumps(ret).encode('utf-8')
 
 			self.send_response(200)
 			self.send_header("Content-Type", "application/json")
@@ -268,6 +301,8 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 			return
 
 		if self.command == 'POST':
+			self.check_params([])
+
 			content = self.post_get_json(128 * 1024)
 			obj = None
 			timestamp = time.time()

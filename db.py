@@ -118,7 +118,7 @@ class connection():
 
 		# Get the value of last change preceding the timestamp
 		if timestamp is not None:
-			time_cond += ' AND timestamp <= ?'
+			time_cond = ' AND timestamp <= ?'
 			params += [ int(timestamp * 1000) ]
 		else:
 			time_cond = ''
@@ -145,7 +145,7 @@ class connection():
 
 		# Get the value of last change preceding the timestamp
 		if timestamp is not None:
-			time_cond += ' AND timestamp <= ?'
+			time_cond = ' AND timestamp <= ?'
 			timestamp = int(timestamp * 1000)
 			params += ( timestamp, timestamp )
 		else:
@@ -242,7 +242,7 @@ class connection():
 
 		# Get the last 64 lines preceding the timestamp
 		if timestamp is not None:
-			time_cond += 'WHERE timestamp <= ? '
+			time_cond = 'WHERE timestamp <= ? '
 			params += ( int(timestamp * 1000), )
 		else:
 			time_cond = ''
@@ -267,7 +267,7 @@ class connection():
 
 		# Get the last floorplan version preceding the timestamp
 		if timestamp is not None:
-			time_cond += 'WHERE timestamp <= ? '
+			time_cond = 'WHERE timestamp <= ? '
 			params += ( int(timestamp * 1000), )
 		else:
 			time_cond = ''

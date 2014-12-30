@@ -95,6 +95,9 @@ class console_log():
 	def get_recent_lines(self):
 		return self.last_n
 
+	def get_lines_at_timestamp(self, timestamp):
+		return self.storage.get_console_at_timestamp(timestamp)
+
 def base_message_handler(raw_msg, base):
 	global state, console
 

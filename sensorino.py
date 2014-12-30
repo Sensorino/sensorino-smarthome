@@ -818,3 +818,6 @@ class sensorino_state():
 
 	def get_state_tree(self):
 		return self.state
+
+	def get_state_at_timestamp(self, timestamp):
+		return self.storage.get_tree_at_timestamp(timestamp)
