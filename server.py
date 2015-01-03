@@ -116,12 +116,17 @@ def base_message_handler(raw_msg, base):
 			raise Exception('No type')
 		type = msg.get('type', 'err')
 
-		if type not in [ 'publish', 'err' ]:
+		if type not in [ 'publish', 'request', 'set', 'err' ]:
 			raise Exception('Unknown type')
 
 		if type == 'publish':
 			sensorino.validate_incoming_publish(msg)
 			state.validate_incoming_publish(msg)
+		elif type == 'request':
+			sensorino.validate_incoming_request(msg)
+		elif type == 'set':
+			sensorino.validate_incoming_set(msg)
+			state.validate_incoming_set(msg)
 		else:
 			sensorino.validate_incoming_error(msg)
 
@@ -139,6 +144,10 @@ def base_message_handler(raw_msg, base):
 
 			if type == 'publish':
 				state.handle_publish(timestamp, msg)
+			elif type == 'request':
+				state.handle_request(timestamp, msg)
+			elif type == 'set':
+				state.handle_set(timestamp, msg)
 			else:
 				state.handle_error(timestamp, msg)
 		else:
