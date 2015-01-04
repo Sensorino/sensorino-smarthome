@@ -132,9 +132,9 @@ timeline.prototype.add_label = function(ts, precision) {
 		return;
 
 	if (x < this.min_x)
-		this.min_x = x - 50;
+		this.min_x = x - 50;	/* TODO: use actual text width x2 */
 	else
-		this.max_x = x + 50;
+		this.max_x = x + 50;	/* TODO: use actual text width x2 */
 
 	var label = document.createElement('div');
 
@@ -285,7 +285,7 @@ timeline.prototype.move_timestamp = function(evt) {
 	this.hover_update(evt);
 
 	if (this.handler !== undefined)
-		this.handler(evt);
+		this.handler(this.value, evt);
 }
 
 timeline.prototype.hover_update = function(evt) {

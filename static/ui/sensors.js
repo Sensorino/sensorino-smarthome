@@ -1,8 +1,9 @@
 /* Sensor widget classes */
 
-function sensor_text(state, canvas, elem) {
+function sensor_text(canvas, elem) {
 	var channel = elem.channels[0];
 	var value = 'dummy';
+	var state = null;
 
 	elem.obj = new fabric.Text('', {
 		fontFamily: 'Times', /* TODO: style */
@@ -35,14 +36,38 @@ function sensor_text(state, canvas, elem) {
 		clear_tip('sensor');
 	};
 
-	/* TODO: move to base class */
-	state.subscribe(channel, function(path, oldval, newval) { update(newval); });
-	update(state.get_channel(channel));
+	elem.obj.histmode_onover = function(o) {
+		set_tip('Sensor channel ' + state.format_channel(channel) +
+			', value at timestamp: ' + value, 'sensor');
+	};
+	elem.obj.histmode_onout = function(o) {
+		clear_tip('sensor');
+	};
+
+	var handler = function(path, oldval, newval) { update(newval); };
+	this.set_state = function(new_state) {
+		if (state === new_state)
+			return;
+
+		if (state !== null)
+			state.unsubscribe(channel, handler);
+
+		state = new_state;
+		value = 'dummy';
+
+		if (state !== null) {
+			state.subscribe(channel, handler);
+			update(state.get_channel(channel));
+		}
+	}
+
+	update(null);
 }
 
-function sensor_switch(state, canvas, elem) {
+function sensor_switch(canvas, elem) {
 	var channel = elem.channels[0];
 	var value = 'dummy';
+	var state = null;
 
 	var path0 = new fabric.Path('M0,-10V10', {
 		strokeWidth: 20,
@@ -105,8 +130,33 @@ function sensor_switch(state, canvas, elem) {
 		clear_tip('sensor');
 	};
 
-	state.subscribe(channel, function(path, oldval, newval) { update(newval); });
-	update(state.get_channel(channel));
+	elem.obj.histmode_onover = function(o) {
+		set_tip('Sensor channel ' + state.format_channel(channel) +
+			', value at timestamp: ' + (value === null ? 'Unknown' :
+			(value ? 'On' : 'Off')), 'sensor');
+	};
+	elem.obj.histmode_onout = function(o) {
+		clear_tip('sensor');
+	};
+
+	var handler = function(path, oldval, newval) { update(newval); };
+	this.set_state = function(new_state) {
+		if (state === new_state)
+			return;
+
+		if (state !== null)
+			state.unsubscribe(channel, handler);
+
+		state = new_state;
+		value = 'dummy';
+
+		if (state !== null) {
+			state.subscribe(channel, handler);
+			update(state.get_channel(channel));
+		}
+	}
+
+	update(null);
 }
 
 /* TODO: slider sensor */

@@ -387,6 +387,51 @@ sensorino_state.prototype.parse_channel = function(str) {
 	return [ node_addr, svc_id, data_type, channel_id ];
 }
 
+sensorino_state.prototype.request_state_at_timestamp =
+	function(timestamp, handler) {
+	/*
+	 * Use the "ago=" parameter to the API call, instead of "at=", to
+	 * reduce the dependency on server and client timezone difference and
+	 * clock synchronisation.  Unfortunately network delays may be a
+	 * problem for some users when passing "ago=".
+	 */
+	var now = Date.now() * 0.001;
+	var ago = now - timestamp;
+
+	function load_error(err) {
+		if (err.statusCode === undefined)
+			handler(null, 'Can\'t connect');
+		else if (err.body.length)
+			handler(null, 'Server message: ' + err.body);
+		else
+			handler(null, 'Error ' + err.statusCode + ' loading historical state.');
+	}
+
+	function load_done(tree) {
+		handler(new temporary_state(timestamp, tree));
+	}
+
+	oboe('/api/sensorino.json?ago=' + ago).fail(load_error).done(load_done);
+}
+
+function temporary_state(timestamp, tree) {
+	this.timestamp = timestamp;
+	this.nodes = tree;
+}
+
+/* These only access .nodes so re-use them */
+temporary_state.prototype.get_channel =
+	sensorino_state.prototype.get_channel;
+temporary_state.prototype.get_svc_channel_counts =
+	sensorino_state.prototype.get_svc_channel_counts;
+temporary_state.prototype.format_channel =
+	sensorino_state.prototype.format_channel;
+
+temporary_state.prototype.subscribe = function(addr, handler) {}
+temporary_state.prototype.unsubscribe = function(addr, handler) {}
+temporary_state.prototype.subscribe_updates = function(handler) {}
+temporary_state.prototype.unsubscribe_updates = function(handler) {}
+
 /* From MDN */
 if (!String.prototype.startsWith) {
 	Object.defineProperty(String.prototype, 'startsWith', {

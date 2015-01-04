@@ -4,8 +4,6 @@ function floorplan(canvas, sensorino_state) {
 	this.canvas = canvas;
 	this.sensorino_state = sensorino_state;
 
-	this.slider = new timeline(document.getElementById('fp-time-slider'));
-
 	function add_elem(x, y, elemtype) {
 		var elem = { 'type': elemtype, 'x': x, 'y': y, adj: [] };
 		this_obj.elems.push(elem);
@@ -308,7 +306,8 @@ function floorplan(canvas, sensorino_state) {
 		elem.dsp_type = type;
 		elem.channels = channels;
 
-		new cls(sensorino_state, canvas, elem);
+		elem.widget = new cls(canvas, elem);
+		elem.widget.set_state(sensorino_state);
 		elem.obj.elem = elem; /* For move/rotate callbacks' use */
 		elem.obj.selectable = true;
 		elem.obj.set({ left: elem.x, top: elem.y });
@@ -338,6 +337,19 @@ function floorplan(canvas, sensorino_state) {
 	function view_mode_mouse_out(o) {
 		if (o.target !== undefined && 'viewmode_onout' in o.target)
 			o.target.viewmode_onout(o.target);
+		over = null;
+	}
+
+	function hist_mode_mouse_over(o) {
+		if (o.target !== undefined && 'histmode_onover' in o.target) {
+			o.target.histmode_onover(o.target);
+			over = o;
+		}
+	}
+
+	function hist_mode_mouse_out(o) {
+		if (o.target !== undefined && 'histmode_onout' in o.target)
+			o.target.histmode_onout(o.target);
 		over = null;
 	}
 
@@ -582,16 +594,62 @@ function floorplan(canvas, sensorino_state) {
 			alert('Error ' + err.statusCode + ' saving the floorplan to server.');
 	}
 
+	/* History mode support */
+
+	var temp_state = null;
+
+	function load_temp_state(state, err) {
+		if (state === null) {
+			set_tip('Request for historical state failed');
+			alert('The following error occured when trying to load the ' +
+					'state at requested date & time:\n\n' + err);
+			return;
+		}
+
+		temp_state = state;
+
+		/* Tell all widgets to switch to this temporary state */
+		for (var i = 0; i < this_obj.elems.length; i++) {
+			var elem = this_obj.elems[i];
+
+			if (elem.type === 'se' || elem.type === 'ac')
+				elem.widget.set_state(temp_state);
+		}
+
+		set_tip('Requested historical state loaded.');
+	}
+
+	this.slider = new timeline(document.getElementById('fp-time-slider'),
+			function(new_timestamp) {
+				set_tip('Loading historical state from server.');
+				sensorino_state.request_state_at_timestamp(new_timestamp,
+						load_temp_state);
+			});
+
+	/* Mode switch support and general initialisation */
+
 	var mode = 'none';
 
 	this.update_mode = function() {
 		/* Objects are selectable only in edit mode */
 		var selectable = (mode === 'edit');
+
+		/*
+		 * If we're switching away from history mode, may need to tell all our
+		 * widgets to show the current state again.
+		 */
+		var update_state = mode !== 'hist' && temp_state !== null;
+		temp_state = null;
+
 		for (var i = 0; i < this.elems.length; i++) {
 			var elem = this.elems[i];
 
 			if (elem.type === 'tx' || elem.type === 'se' || elem.type === 'ac')
 				elem.obj.selectable = selectable;
+
+			if (update_state)
+				if (elem.type === 'se' || elem.type === 'ac')
+					elem.widget.set_state(sensorino_state);
 		}
 	}
 
@@ -609,6 +667,8 @@ function floorplan(canvas, sensorino_state) {
 		if (over !== null) {
 			if (mode === 'view')
 				view_mode_mouse_out(over);
+			else if (mode === 'hist')
+				hist_mode_mouse_out(over);
 			else if (mode === 'edit')
 				edit_mode_mouse_out(over);
 		}
@@ -617,6 +677,9 @@ function floorplan(canvas, sensorino_state) {
 			canvas.on('mouse:down', view_mode_mouse_down);
 			canvas.on('mouse:over', view_mode_mouse_over);
 			canvas.on('mouse:out', view_mode_mouse_out);
+		} else if (to === 'hist') {
+			canvas.on('mouse:over', hist_mode_mouse_over);
+			canvas.on('mouse:out', hist_mode_mouse_out);
 		} else if (to === 'edit') {
 			canvas.on('mouse:down', edit_mode_mouse_down);
 			canvas.on('mouse:move', edit_mode_mouse_move);
@@ -709,7 +772,8 @@ function floorplan(canvas, sensorino_state) {
 					}
 
 				/* Now we can instantiate it */
-				new cls(sensorino_state, canvas, elem);
+				elem.widget = new cls(canvas, elem);
+				elem.widget.set_state(sensorino_state);
 				elem.obj.elem = elem; /* For move/rotate callbacks' use */
 				elem.obj.set({
 					left: elem.x,

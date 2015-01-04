@@ -1,8 +1,9 @@
 /* Actuator widget classes */
 
-function actuator_switch(state, canvas, elem) {
+function actuator_switch(canvas, elem) {
 	var channel = elem.channels[0];
 	var value = 'dummy';
+	var state = null;
 	var echo_id = null;
 
 	var path0 = new fabric.Path('M0,-10V10', {
@@ -107,10 +108,33 @@ function actuator_switch(state, canvas, elem) {
 		canvas.renderAll();
 	};
 
-	state.subscribe(channel, function(path, oldval, newval, err) {
-			update(newval, err);
-		});
-	update(state.get_channel(channel));
+	elem.obj.histmode_onover = function(o) {
+		set_tip('Actuator channel ' + state.format_channel(channel) +
+			', value at timestamp: ' + (value === null ? 'Unknown' :
+			(value ? 'On' : 'Off')) + '.', 'actuator');
+	};
+	elem.obj.histmode_onout = function(o) {
+		clear_tip('actuator');
+	};
+
+	var handler = function(path, oldval, newval, err) { update(newval, err); };
+	this.set_state = function(new_state) {
+		if (state === new_state)
+			return;
+
+		if (state !== null)
+			state.unsubscribe(channel, handler);
+
+		state = new_state;
+		value = 'dummy';
+
+		if (state !== null) {
+			state.subscribe(channel, handler);
+			update(state.get_channel(channel));
+		}
+	}
+
+	update(null, false);
 }
 
 /* TODO: slider actuator */
