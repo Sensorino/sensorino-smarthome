@@ -78,10 +78,14 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 
 		try:
 			if 'at' in self.params:
-				return float(self.params['at'])
+				t = float(self.params['at'])
+				int(t * 1000.0) # Raise exception if NaN, etc.
+				return t
 
 			if 'ago' in self.params:
-				return time.time() - float(self.params['ago'])
+				t = time.time() - float(self.params['ago'])
+				int(t * 1000.0) # Raise exception if NaN, etc.
+				return t
 
 			return None
 		except:
