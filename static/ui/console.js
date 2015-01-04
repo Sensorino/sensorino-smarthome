@@ -4,6 +4,8 @@ function sensorino_console() {
 	 * as a combined stream.
 	 */
 
+	this.slider = new timeline(document.getElementById('console-time-slider'));
+
 	/* Message display */
 
 	var output_obj = document.getElementById('console-view');

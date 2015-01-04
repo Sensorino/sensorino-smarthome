@@ -4,6 +4,8 @@ function floorplan(canvas, sensorino_state) {
 	this.canvas = canvas;
 	this.sensorino_state = sensorino_state;
 
+	this.slider = new timeline(document.getElementById('fp-time-slider'));
+
 	function add_elem(x, y, elemtype) {
 		var elem = { 'type': elemtype, 'x': x, 'y': y, adj: [] };
 		this_obj.elems.push(elem);

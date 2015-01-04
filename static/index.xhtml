@@ -15,6 +15,7 @@
   <script type="application/javascript" src="ui/sensors.js"></script>
   <script type="application/javascript" src="ui/actuators.js"></script>
   <script type="application/javascript" src="ui/console.js"></script>
+  <script type="application/javascript" src="ui/timeline.js"></script>
   <script type="application/javascript"><![CDATA[
 function init() {
   window.sensorino = new sensorino_state();
@@ -129,9 +130,7 @@ function stop_echo(echo) {
    <div id="fp-canvas" class="floorplan c0 c1 c2">
     <canvas id="fp-real-canvas" />
    </div>
-   <div id="fp-time-slider" class="time-slider floorplan c1">
-    TODO timeline slider
-   </div>
+   <div id="fp-time-slider" class="timeline floorplan c1" />
    <div class="floorplan c2" />
    <div id="fp-unused-warning" />
   </div>
@@ -152,9 +151,7 @@ function stop_echo(echo) {
    <div class="choice" id="console-mode-choice" />
    <pre id="console-view" class="console c0 c1" />
    <div id="console-input" class="console c0" />
-   <div id="console-time-slider" class="time-slider console c1">
-    TODO timeline slider
-   </div>
+   <div id="console-time-slider" class="timeline console c1" />
    <div id="console-help" class="console c2">
     <h2>TODO</h2>
     <h2>Structure of a Sensorino sensor-network</h2>

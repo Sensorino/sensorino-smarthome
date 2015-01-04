@@ -247,12 +247,71 @@ button {
   padding: 10pt;
 }
 
-.time-slider {
+.timeline {
   position: absolute;
   height: 50px;
-  bottom: 30px;
+  bottom: 50px;
   left: 30px;
   right: 30px;
+
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 9px;
+  -moz-border-radius: 9px;
+  -webkit-border-radius: 9px;
+  box-shadow: 0 0 8px 0 #ddd;
+  -moz-box-shadow: 0 0 8px 0 #ddd;
+  -webkit-box-shadow: 0 0 8px 0 #ddd;
+}
+
+.timeline-value {
+  position: absolute;
+  top: 60%;
+  left: 0%;
+  width: 100%;
+  font-size: 12pt;
+  font-family: "Verdana";
+  text-align: center;
+}
+
+.timeline-line {
+  position: absolute;
+  top: 20%;
+  height: 60%;
+  left: 0;
+  width: 100%;
+}
+.timeline-axis {
+  position: absolute;
+  background: black;
+  top: 50%;
+  height: 1px;
+}
+.timeline-marker {
+  position: absolute;
+  top: 20%;
+  height: 60%;
+  width: 3px;
+}
+.timeline-ts-marker {
+  background: #bcf;
+  z-index: 10;
+}
+.timeline-cur-marker {
+  background: #444;
+}
+.timeline-hover-marker {
+  background: #e6e;
+  visibility: hidden;
+  z-index: 15;
+}
+
+.timeline-label {
+  position: absolute;
+  top: 10%;
+  font-size: 9pt;
+  font-family: "Verdana";
+  text-align: center;
+  color: #bbb;
 }
 
 .echo-start {
