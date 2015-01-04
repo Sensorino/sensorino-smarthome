@@ -10,18 +10,27 @@ function sensorino_console() {
 		var timestamp = obj[0];
 		var line = obj[1];
 
-		/* TODO: also display the timestamp in some format, e.g. an onmouseover
-		 * hint or group messages with headers something like "over 5 minutes ago",
-		 * "over 30 minutes ago", "yesterday", "last week", etc.
+		/*
+		 * TODO: also use the timestamp to group messages with headers
+		 * something like "over 5 minutes ago", "over 30 minutes ago",
+		 * "yesterday", "last week", etc.
 		 */
 
 		var code = document.createElement('code');
 		var pref = document.createElement('span');
+		var ts_div = document.createElement('div');
 
 		pref.textContent = line.substr(0, 4);
 		pref.classList.add('prefix');
 		code.textContent = line.substr(4);
 		code.classList.add('language-json');
+
+		var date = new Date(timestamp * 1000.0);
+		ts_div.textContent = date.toDateString() + ' \n' +
+			date.toTimeString().substr(0, 5) + '+' +
+			date.getSeconds() + '.' +
+			Math.floor(date.getMilliseconds() * 0.01) + 's ';
+		ts_div.classList.add('console-timestamp');
 
 		if (line[0] == '>')
 			code.classList.add('out');
@@ -34,6 +43,7 @@ function sensorino_console() {
 
 		hljs.highlightBlock(code);
 		code.insertBefore(pref, code.firstChild);
+		code.insertBefore(ts_div, code.firstChild);
 		output.appendChild(code);
 		output.appendChild(br);
 

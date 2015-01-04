@@ -172,6 +172,15 @@ button {
   font-weight: bold;
 }
 
+.console-timestamp {
+  font-family: 'Verdana';
+  color: #777;
+  white-space: pre-wrap;
+  font-size: 6pt;
+  line-height: 6pt;
+  display: inline-block;
+}
+
 #console-input {
   position: absolute;
   height: 50px;
