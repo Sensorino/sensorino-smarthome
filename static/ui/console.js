@@ -151,6 +151,7 @@ function sensorino_console() {
 			set_tip('Loaded requested logs from the server.');
 
 			hist_output_obj.innerHtml = '';
+			hist_output_obj.classList.remove('msg');
 
 			for (var i = 0; i < log.length; i++)
 				format_line(hist_output_obj, log[i]);
@@ -159,6 +160,10 @@ function sensorino_console() {
 		set_tip('Loading console logs from server.');
 		oboe('/api/console.json?ago=' + ago).fail(load_error).done(load_done);
 	}
+
+	hist_output_obj.classList.add('msg');
+	hist_output_obj.textContent = 'No console logs are loaded.  Select a ' +
+		'date & time on the timeline to load the log buffer at given timestamp.';
 
 	this.slider = new timeline(document.getElementById('console-time-slider'),
 			load_at_timestamp);

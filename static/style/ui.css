@@ -148,6 +148,12 @@ button {
   white-space: pre-wrap;
   line-height: 2pt;
 }
+#console-hist-view.msg {
+  font-family: "Verdana";
+  white-space: auto;
+  line-height: normal;
+  text-align: center;
+}
 
 #console-view code, #console-hist-view code {
   line-height: 13pt;
