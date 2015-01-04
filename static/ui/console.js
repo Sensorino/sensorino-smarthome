@@ -4,21 +4,12 @@ function sensorino_console() {
 	 * as a combined stream.
 	 */
 
-	this.slider = new timeline(document.getElementById('console-time-slider'));
-
 	/* Message display */
 
-	var output_obj = document.getElementById('console-view');
-	var status_obj = document.getElementById('conn-status');
-
-	var lines = [];
-
-	function handle_new_line(obj) {
+	function format_line(output, obj) {
 		var timestamp = obj[0];
 		var line = obj[1];
 
-		if (lines.length && timestamp <= lines[lines.length - 1][0])
-			return;
 		/* TODO: also display the timestamp in some format, e.g. an onmouseover
 		 * hint or group messages with headers something like "over 5 minutes ago",
 		 * "over 30 minutes ago", "yesterday", "last week", etc.
@@ -43,9 +34,33 @@ function sensorino_console() {
 
 		hljs.highlightBlock(code);
 		code.insertBefore(pref, code.firstChild);
-		output_obj.appendChild(code);
-		output_obj.appendChild(br);
-		lines.push([ timestamp, code, br ]);
+		output.appendChild(code);
+		output.appendChild(br);
+
+		/* Scroll to the bottom if there's a y-overflow */
+		/* TODO: Perhaps only scroll if we were at the bottom before this
+		 * line was added.  Or possibly add an "autoscroll" checkbox.
+		 * TODO: animate */
+		code.scrollIntoView(false);
+
+		return [ timestamp, code, br ];
+	}
+
+	/* Live console view */
+
+	var output_obj = document.getElementById('console-view');
+	var status_obj = document.getElementById('conn-status');
+
+	var lines = [];
+
+	function handle_new_line(obj) {
+		var timestamp = obj[0];
+		var line = obj[1];
+
+		if (lines.length && timestamp <= lines[lines.length - 1][0])
+			return;
+
+		lines.push(format_line(output_obj, obj));
 
 		/* Remove very old lines */
 		while (lines.length > 100) {
@@ -53,12 +68,6 @@ function sensorino_console() {
 			for (var i = 1; i < line_rec.length; i++)
 				output_obj.removeChild(line_rec[i]);
 		}
-
-		/* Scroll to the bottom if there's a y-overflow */
-		/* TODO: Perhaps only scroll if we were at the bottom before this
-		 * line was added.  Or possibly add an "autoscroll" checkbox.
-		 * TODO: animate */
-		code.scrollIntoView(false);
 	}
 
 	stream('/api/stream/console.json', handle_new_line);
@@ -108,6 +117,51 @@ function sensorino_console() {
 
 			oboe(options).fail(send_error).done(send_done);
 		}, true);
+
+	/* Console history logs view */
+
+	var hist_output_obj = document.getElementById('console-hist-view');
+
+	function load_at_timestamp(new_timestamp) {
+		/*
+		 * Use the "ago=" parameter to the API call, instead of "at=", to
+		 * reduce the dependency on server and client timezone difference and
+		 * clock synchronisation.  Unfortunately network delays may be a
+		 * problem for some users when passing "ago=".
+		 */
+		var now = Date.now() * 0.001;
+		var ago = now - new_timestamp;
+
+		function load_error(err) {
+			set_tip('Error while loading console logs from server.');
+
+			var msg;
+			if (err.statusCode === undefined)
+				msg = 'Can\'t connect';
+			else if (err.body.length)
+				msg = 'Server message: ' + err.body;
+			else
+				msg = 'Error ' + err.statusCode + ' loading historical state.';
+
+			alert('The following error was reported while trying to load ' +
+					'the logs from the server:\n\n' + msg);
+		}
+
+		function load_done(log) {
+			set_tip('Loaded requested logs from the server.');
+
+			hist_output_obj.innerHtml = '';
+
+			for (var i = 0; i < log.length; i++)
+				format_line(hist_output_obj, log[i]);
+		}
+
+		set_tip('Loading console logs from server.');
+		oboe('/api/console.json?ago=' + ago).fail(load_error).done(load_done);
+	}
+
+	this.slider = new timeline(document.getElementById('console-time-slider'),
+			load_at_timestamp);
 }
 /* vim: ts=2:
 */

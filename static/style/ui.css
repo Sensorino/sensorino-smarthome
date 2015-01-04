@@ -135,7 +135,7 @@ button {
   padding: 10pt;
 }
 
-#console-view {
+#console-view, #console-hist-view {
   position: absolute;
   top: 90px;
   bottom: 90px;
@@ -149,20 +149,20 @@ button {
   line-height: 2pt;
 }
 
-#console-view code {
+#console-view code, #console-hist-view code {
   line-height: 13pt;
   padding: 5pt 20px;
   background: #f0f0f0;
 }
 
-#console-view code.error {
+#console-view code.error, #console-hist-view code.error {
   background: #f8a0a0;
 }
 
-#console-view code.in .prefix {
+#console-view code.in .prefix, #console-hist-view code.in .prefix {
   color: #777;
 }
-#console-view code.out .prefix {
+#console-view code.out .prefix, #console-hist-view code.out .prefix {
   font-weight: bold;
 }
 
