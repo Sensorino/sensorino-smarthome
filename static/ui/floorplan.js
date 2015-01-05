@@ -608,14 +608,7 @@ function floorplan(canvas, sensorino_state) {
 
 		temp_state = state;
 
-		/* Tell all widgets to switch to this temporary state */
-		for (var i = 0; i < this_obj.elems.length; i++) {
-			var elem = this_obj.elems[i];
-
-			if (elem.type === 'se' || elem.type === 'ac')
-				elem.widget.set_state(temp_state);
-		}
-
+		this.update_mode();
 		set_tip('Requested historical state loaded.');
 	}
 
@@ -638,8 +631,8 @@ function floorplan(canvas, sensorino_state) {
 		 * If we're switching away from history mode, may need to tell all our
 		 * widgets to show the current state again.
 		 */
-		var update_state = mode !== 'hist' && temp_state !== null;
-		temp_state = null;
+		var state = (mode === 'hist' && temp_state !== null) ? temp_state :
+			sensorino_state;
 
 		for (var i = 0; i < this.elems.length; i++) {
 			var elem = this.elems[i];
@@ -647,9 +640,8 @@ function floorplan(canvas, sensorino_state) {
 			if (elem.type === 'tx' || elem.type === 'se' || elem.type === 'ac')
 				elem.obj.selectable = selectable;
 
-			if (update_state)
-				if (elem.type === 'se' || elem.type === 'ac')
-					elem.widget.set_state(sensorino_state);
+			if (elem.type === 'se' || elem.type === 'ac')
+				elem.widget.set_state(state);
 		}
 	}
 
