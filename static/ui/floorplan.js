@@ -7,6 +7,9 @@ function floorplan(canvas, sensorino_state) {
 	function add_elem(x, y, elemtype) {
 		var elem = { 'type': elemtype, 'x': x, 'y': y, adj: [] };
 		this_obj.elems.push(elem);
+
+		modified = true;
+
 		return elem;
 	}
 
@@ -29,6 +32,8 @@ function floorplan(canvas, sensorino_state) {
 			if (elem.to.adj.length == 0)
 				remove_elem(elem.to);
 		}
+
+		modified = true;
 	}
 
 	/* Menus */
@@ -88,12 +93,16 @@ function floorplan(canvas, sensorino_state) {
 		},
 		'thick': {
 			'tip': 'Make line thick (wall)',
-			'fun': function(o) { o.ltype = 0; o.obj.set({ 'strokeWidth': 4 }); },
+			'fun': function(o) {
+				o.ltype = 0; o.obj.set({ 'strokeWidth': 4 }); modified = true;
+			},
 			'url': 'img/thick.png'
 		},
 		'thin': {
 			'tip': 'Make line thin (door, window, etc.)',
-			'fun': function(o) { o.ltype = 1; o.obj.set({ 'strokeWidth': 1 }); },
+			'fun': function(o) {
+				o.ltype = 1; o.obj.set({ 'strokeWidth': 1 }); modified = true;
+			},
 			'url': 'img/thin.png'
 		},
 	};
@@ -116,6 +125,7 @@ function floorplan(canvas, sensorino_state) {
 				o.text = content;
 				o.obj.setText(content);
 				canvas.renderAll();
+				modified = true;
 			},
 			'url': 'img/text.png'
 		},
@@ -171,6 +181,7 @@ function floorplan(canvas, sensorino_state) {
 	var ctx_menu = null;
 	var line = null;
 	var skip_mouse_down = false;
+	var modified = false;
 
 	this.reset_edit_state = function() {
 		/* Reset editor state */
@@ -567,6 +578,8 @@ function floorplan(canvas, sensorino_state) {
 		o.elem.height = o.getHeight();
 		if (o.elem.type === 'tx')
 			o.elem.text = o.getText(); /* May possibly use IText */
+
+		modified = true;
 	}
 
 	function edit_mode_deselected(o) {
@@ -580,6 +593,8 @@ function floorplan(canvas, sensorino_state) {
 	function save_done(ret) {
 		clear_tip('fp-save');
 		set_tip('Floorplan saved Ok.');
+
+		modifed = false;
 	}
 
 	function save_error(err) {
@@ -683,8 +698,7 @@ function floorplan(canvas, sensorino_state) {
 		}
 
 		/* If we're exiting the edit mode, submit new state to server */
-		/* TODO: check if anything has been modified? */
-		if (mode === 'edit' && to !== 'edit' && inited) {
+		if (mode === 'edit' && to !== 'edit' && inited && modified) {
 			set_tip('Saving changes…', 'fp-save');
 
 			var options = {
@@ -778,6 +792,8 @@ function floorplan(canvas, sensorino_state) {
 				canvas.add(elem.obj);
 			}
 		}
+
+		modified = false;
 
 		this.update_mode();
 		canvas.renderAll(); /* TODO: May also disable auto-rerender temporarily */
