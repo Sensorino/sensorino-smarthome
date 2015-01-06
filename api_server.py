@@ -7,6 +7,8 @@
 # Classes that implement the API & UI httpd
 #
 
+import sensorino
+
 import json
 import socket
 import medusaserver
@@ -71,19 +73,20 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 
 	time_params = [ 'at', 'ago' ]
 
-	def parse_time_params(self):
-		if 'at' in self.params and 'ago' in self.params:
-			raise Exception(400, 'Either at= or ago= parameter ' +
-					'may be given but not both.')
+	def parse_time_params(self, at='at', ago='ago'):
+		if at in self.params and ago in self.params:
+			raise Exception(400, 'Either ' + at + '= or ' + ago +
+					'= parameter may be given but ' +
+					'not both.')
 
 		try:
-			if 'at' in self.params:
-				t = float(self.params['at'])
+			if at in self.params:
+				t = float(self.params[at])
 				int(t * 1000.0) # Raise exception if NaN, etc.
 				return t
 
-			if 'ago' in self.params:
-				t = time.time() - float(self.params['ago'])
+			if ago in self.params:
+				t = time.time() - float(self.params[ago])
 				int(t * 1000.0) # Raise exception if NaN, etc.
 				return t
 
@@ -334,6 +337,65 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 
 			return
 
+	def handle_api_value(self, path):
+		self.check_method([ 'GET' ]) # TODO: POST
+
+		self.check_params([ 'at', 'ago', 'at0', 'ago0', 'at1', 'ago1' ])
+		timestamp = self.parse_time_params()
+		timestamp0 = self.parse_time_params('at0', 'ago0')
+		timestamp1 = self.parse_time_params('at1', 'ago1')
+
+		try:
+			node_addr, svc_id, typ, chan_id = path
+			svc_id = int(svc_id)
+			chan_id = int(chan_id)
+			if typ in sensorino.known_datatypes_dict:
+				typ = sensorino.datatype_to_name(typ)
+		except:
+			raise Exception(404, 'Bad channel address')
+		try:
+			node_addr = int(node_addr)
+		except:
+			pass
+
+		if timestamp is None and timestamp0 is None:
+			tree = self.server.state.get_state_tree()
+			try:
+				ret = tree[node_addr][svc_id][typ][chan_id]
+			except:
+				raise Exception(404, 'No such channel')
+		elif timestamp is not None:
+			path = [ node_addr, svc_id, typ, chan_id ]
+			ret = self.server.storage.get_value_at_timestamp( \
+					path, timestamp)
+			if ret is None:
+				raise Exception(404, 'No such channel')
+		else:
+			path = [ node_addr, svc_id, typ, chan_id ]
+			if timestamp1 is None:
+				timestamp1 = time.time()
+
+			# First load the value at the start of the period
+			val0 = self.server.storage.get_value_at_timestamp( \
+					path, timestamp0)
+			vals = self.server.storage.get_values_within_period( \
+					path, timestamp0, timestamp1)
+			if val0 is None and not vals:
+				raise Exception(404, 'No such channel')
+
+			ret = [ val0 ] + vals
+
+		content = json.dumps(ret).encode('utf-8')
+
+		self.send_response(200)
+		self.send_header("Content-Type", "application/json")
+		self.send_header("Content-Length", str(len(content)))
+		self.end_headers()
+
+		self.wfile.write(content)
+
+		return
+
 	def handle_data(self):
 		# Translate path
 		path = self.path.split('#', 1)[0]
@@ -354,6 +416,7 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 
 			# TODO: also add a combined stream of all events.
 
+			splitpath = path[1:].split('/')
 			if path == '/api/sensorino.json':
 				self.handle_api_sensorino()
 			elif path == '/api/stream/sensorino.json':
@@ -364,6 +427,9 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 				self.handle_api_console_stream()
 			elif path == '/api/floorplan.json':
 				self.handle_api_floorplan()
+			elif len(splitpath) == 6 and splitpath[0] == 'api' and \
+					splitpath[5] == 'value.json':
+				self.handle_api_value(splitpath[1:5])
 			else:
 				medusaserver.RequestHandler.handle_data(self)
 		except Exception as e:

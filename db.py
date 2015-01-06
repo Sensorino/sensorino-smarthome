@@ -194,7 +194,7 @@ class connection():
 			'svc_id IS ? AND ' + \
 			'datatype IS ? AND ' + \
 			'chan_id IS ? AND ' + \
-			'success ORDER BY timestamp LIMIT 1024'
+			'success ORDER BY timestamp DESC LIMIT 1024'
 
 		params = [
 			int(t0 * 1000), int(t1 * 1000),
