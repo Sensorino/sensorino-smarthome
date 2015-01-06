@@ -87,7 +87,7 @@ function sensorino_state() {
 		if (!Array.isArray(obj)) {
 			reset_state(obj);
 
-			this_obj.update_listeners.forEach(function(cb) { cb(); });
+			this_obj.update_listeners.forEach(function(cb) { cb([[[]]]); });
 			return;
 		}
 
@@ -124,7 +124,7 @@ function sensorino_state() {
 					state_elem, update, err);
 		}
 
-		this_obj.update_listeners.forEach(function(cb) { cb(); });
+		this_obj.update_listeners.forEach(function(cb) { cb(obj); });
 	}
 
 	function update_status(stat, next) {
