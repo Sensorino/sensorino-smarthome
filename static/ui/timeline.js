@@ -3,8 +3,8 @@ function timeline(obj, handler) {
 	this.handler = handler;
 	var this_obj = this;
 
-	/* TODO: 12/24 display settings */
-	/* TODO: scale the number of labels with window width */
+	/* TODO: 12/24 display settings + more localisation */
+	/* TODO: update labels etc on resize/reflow */
 
 	/* Value of -1 means current time */
 	this.value = -1;
@@ -100,15 +100,15 @@ timeline.prototype.update = function() {
 	this.min_x = this.obj.clientWidth;
 	this.max_x = 0;
 
-	for (var i = 0; i <= 5; i++) {
+	for (var i = 0; i <= 8; i++) {
 		this.add_label(hour_timestamp + i * 60 * 60, 1);
 		this.add_label(hour_timestamp - i * 60 * 60, 1);
 	}
-	for (var i = 0; i <= 5; i++) {
+	for (var i = 0; i <= 6; i++) {
 		this.add_label(day_timestamp + i * 24 * 60 * 60, 2);
 		this.add_label(day_timestamp - i * 24 * 60 * 60, 2);
 	}
-	for (var i = 0; i <= 5; i++) {
+	for (var i = 0; i <= 6; i++) {
 		this.add_label(month_timestamp + i * 30 * 24 * 60 * 60, 3); /* FIXME */
 		this.add_label(month_timestamp - i * 30 * 24 * 60 * 60, 3); /* FIXME */
 	}
@@ -128,15 +128,11 @@ timeline.prototype.add_label = function(ts, precision) {
 	var pos = this.timestamp_to_pos(ts);
 	var x = pos * this.obj.clientWidth / 100;
 
-	if (x > this.min_x && x < this.max_x)
+	if (x >= this.min_x && x <= this.max_x)
 		return;
 
-	if (x < this.min_x)
-		this.min_x = x - 50;	/* TODO: use actual text width x2 */
-	else
-		this.max_x = x + 50;	/* TODO: use actual text width x2 */
-
 	var label = document.createElement('div');
+	var labeltext = document.createElement('span');
 
 	label.classList.add('timeline-label');
 	label.style.left = (x - 100) + 'px';
@@ -144,20 +140,26 @@ timeline.prototype.add_label = function(ts, precision) {
 
 	var date = new Date(ts * 1000.0);
 	if (precision === 0)
-		label.textContent = 'now';
+		labeltext.textContent = 'now';
 	else if (precision === 1)
-		label.textContent = date.getHours() + ':00';
+		labeltext.textContent = date.getHours() + ':00';
 	else if (precision === 2) {
 		var days = [ 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' ];
-		label.textContent = days[date.getDay()];
+		labeltext.textContent = days[date.getDay()];
 	} else {
 		var months = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
 			'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
-		label.textContent = months[date.getMonth()] + ' ' + date.getFullYear();
+		labeltext.textContent = months[date.getMonth()] + ' ' + date.getFullYear();
 	}
 
 	this.labels.push(label);
+	label.appendChild(labeltext);
 	this.obj.appendChild(label);
+
+	if (x < this.min_x)
+		this.min_x = x - labeltext.offsetWidth - 3;
+	if (x > this.min_x)
+		this.max_x = x + labeltext.offsetWidth + 3;
 }
 
 /*

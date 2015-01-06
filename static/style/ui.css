@@ -150,7 +150,6 @@ button {
 }
 #console-hist-view.msg {
   font-family: "Verdana";
-  white-space: auto;
   line-height: normal;
   text-align: center;
 }
