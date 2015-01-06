@@ -372,3 +372,81 @@ button {
     height: 3000px;
   }
 }
+
+.browser-node {
+  background: #ccc;
+
+  padding: 20px;
+  margin: 30px;
+  width: 300px;
+
+  border-radius: 9px;
+  -moz-border-radius: 9px;
+  -webkit-border-radius: 9px;
+  box-shadow: 0 0 8px 0 #ddd;
+  -moz-box-shadow: 0 0 8px 0 #ddd;
+  -webkit-box-shadow: 0 0 8px 0 #ddd;
+}
+.browser-nodename {
+  color: #555;
+  font-size: 12pt;
+  font-family: "Verdana";
+  text-align: left;
+}
+
+.browser-svc {
+  background: #aaa;
+  padding: 5px 20px;
+  margin: 20px;
+  text-align: right;
+
+  border-radius: 9px;
+  -moz-border-radius: 9px;
+  -webkit-border-radius: 9px;
+  box-shadow: 0 0 8px 0 #aaa;
+  -moz-box-shadow: 0 0 8px 0 #aaa;
+  -webkit-box-shadow: 0 0 8px 0 #aaa;
+}
+.browser-svcname {
+  float: left;
+  margin-top: 10px;
+  color: #555;
+  font-size: 10pt;
+  font-family: "Verdana";
+}
+
+.browser-chan {
+  padding: 5px 10px;
+  margin: 10px;
+  display: inline-block;
+
+  border-radius: 9px;
+  -moz-border-radius: 9px;
+  -webkit-border-radius: 9px;
+  box-shadow: 0 0 8px 0 #888;
+  -moz-box-shadow: 0 0 8px 0 #888;
+  -webkit-box-shadow: 0 0 8px 0 #888;
+}
+.browser-chan:hover {
+  padding: 7px 12px;
+  margin: 8px;
+  box-shadow: 0 0 14px 1 #888;
+  -moz-box-shadow: 0 0 14px 1 #888;
+  -webkit-box-shadow: 0 0 14px 1 #888;
+}
+.browser-channame {
+  text-transform: uppercase;
+  font-weight: bold;
+  color: #fff;
+  font-size: 12pt;
+  font-family: "Verdana";
+}
+.browser-chan-sensor {
+  background-color: #e6e;
+}
+.browser-chan-actuator {
+  background-color: #89f;
+}
+.browser-chan-unknown {
+  opacity: 0.5;
+}
