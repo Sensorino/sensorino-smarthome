@@ -119,14 +119,14 @@ stats_view.prototype.load_channel = function(new_channel) {
 						'request.</p>';
 				}
 
-				/* Basic value in time graph */
-
 				var datatype = this_obj.channel[2];
 				var basic_type = 'float';
 				if (datatype === 'switch' || datatype === 'presence')
 					basic_type = 'bool';
 				else if (datatype === 'count' || datatype === 'serviceId')
 					basic_type = 'int';
+
+				/* Basic value in time graph */
 
 				/* TODO: replace Google with something opensource, e.g. this looks
 				 * good but canvas-only: http://canvasjs.com/docs/charts/basics-of-creating-html5-chart/zooming-panning/, there are some zoomable D3.js examples too */
@@ -182,7 +182,7 @@ stats_view.prototype.load_channel = function(new_channel) {
 					explorer: {
 						axis: 'horizontal',
 						keepInBounds: true,
-						maxZoomIn: 0.0001,
+						maxZoomIn: 0.00001,
 						maxZoomOut: 1.01,
 					},
 					animation: 300,
@@ -217,8 +217,38 @@ stats_view.prototype.load_channel = function(new_channel) {
 				this_obj.hist_info.appendChild(chart0_div);
 				chart0.draw(chart0_data, chart0_opts);
 
-				/* TODO: github-style days of activity chart */
-				/*https://developers.google.com/chart/interactive/docs/gallery/calendar*/
+				/* Github-style days of activity chart */
+
+				var chart1_div = document.createElement('div');
+				var chart1 = new google.visualization.Calendar(chart1_div);
+
+				var chart1_data = new google.visualization.DataTable();
+				chart1_data.addColumn({ type: 'date', id: 'Timestamp' });
+				chart1_data.addColumn({ type: 'number', id: 'Count' });
+				var day = null;
+				var day_count;
+				for (var i = 0; i < events.length; i++) {
+					var full_date = new Date(events[i][0] * 1000);
+					var date = new Date(full_date.getFullYear(),
+							full_date.getMonth(), full_date.getDay());
+
+					if (day === null || day.toDateString() != date.toDateString()) {
+						if (day !== null)
+							chart1_data.addRow([ day, day_count ]);
+						day = date;
+						day_count = 0;
+					}
+					day_count++;
+				}
+				if (day !== null)
+					chart1_data.addRow([ day, day_count ]);
+
+				var chart1_opts = {
+					title: 'Channel activity by calendar day',
+				};
+				chart1_div.classList.add('stats-by-day');
+				this_obj.hist_info.appendChild(chart1_div);
+				chart1.draw(chart1_data, chart1_opts);
 
 				/* TODO: hysteresis graphs, also customized for types (e.g. pie for
 				 * all types with finite number of values?) */
@@ -248,7 +278,7 @@ stats_view.prototype.load_channel = function(new_channel) {
  * https://groups.google.com/forum/#!topic/google-ajax-search-api/ZIfUgB4iSLU
  */
 google.load("visualization", "1", {
-			packages: [ "corechart" ],
+			packages: [ "corechart", "calendar" ],
 			callback: function() {},
 		});
 

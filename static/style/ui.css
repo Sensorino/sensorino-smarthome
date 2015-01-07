@@ -515,3 +515,7 @@ button {
 
 .stats-val-in-time {
 }
+.stats-by-day {
+  /* Looks like this must to be hardcoded, Google Charts default won't work */
+  height: 350px;
+}
