@@ -5,6 +5,18 @@ function stats_view(obj, sensorino_state, navaid, floorplan) {
 	this.floorplan = floorplan;
 
 	this.channel = null;
+
+	/*
+	 * Google's jsapi uses document.write() which only work for pages served as
+	 * HTML content-type, not XHTML for example.  The "callback:" below is a
+	 * workaround that makes jsapi mysteriously use doucemnt.createElement()
+	 * instead.  Source:
+	 * https://groups.google.com/forum/#!topic/google-ajax-search-api/ZIfUgB4iSLU
+	 */
+	google.load("visualization", "1", {
+				packages: [ "corechart", "calendar" ],
+				callback: function() {},
+			});
 }
 
 /*
@@ -270,17 +282,6 @@ stats_view.prototype.load_channel = function(new_channel) {
 						'TODO', 'errors');
 			});
 }
-/*
- * Google's jsapi uses document.write() which only work for pages served as
- * HTML content-type, not XHTML for example.  The "callback:" below is a
- * workaround that makes jsapi mysteriously use doucemnt.createElement()
- * instead.  Source:
- * https://groups.google.com/forum/#!topic/google-ajax-search-api/ZIfUgB4iSLU
- */
-google.load("visualization", "1", {
-			packages: [ "corechart", "calendar" ],
-			callback: function() {},
-		});
 
 stats_view.prototype.append_info = function(param, value, cls) {
 	var par = document.createElement('p');
