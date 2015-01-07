@@ -229,6 +229,30 @@ stats_view.prototype.load_channel = function(new_channel) {
 				this_obj.hist_info.appendChild(chart0_div);
 				chart0.draw(chart0_data, chart0_opts);
 
+				/* Activity by hour chart */
+
+				var chart2_div = document.createElement('div');
+				var chart2 = new google.visualization.ColumnChart(chart2_div);
+
+				var chart2_data = new google.visualization.DataTable();
+				chart2_data.addColumn({ type: 'string', id: 'Time of day' });
+				chart2_data.addColumn({ type: 'number', id: 'Total events',
+						label: chan_name });
+				var by_hour = [];
+				for (var i = 0; i < 24; i++)
+					by_hour[i] = 0;
+				for (var i = 0; i < events.length; i++)
+					by_hour[new Date(events[i][0] * 1000).getHours()]++;
+				for (var i = 0; i < 24; i++)
+					chart2_data.addRow([ i + ':00', by_hour[i] ]);
+
+				var chart2_opts = {
+					title: 'Channel activity by hour',
+				};
+				chart2_div.classList.add('stats-by-hour');
+				this_obj.hist_info.appendChild(chart2_div);
+				chart2.draw(chart2_data, chart2_opts);
+
 				/* Github-style days of activity chart */
 
 				var chart1_div = document.createElement('div');
@@ -264,7 +288,6 @@ stats_view.prototype.load_channel = function(new_channel) {
 
 				/* TODO: hysteresis graphs, also customized for types (e.g. pie for
 				 * all types with finite number of values?) */
-				/* TODO: activity by hour */
 
 				this_obj.append_info('Period loaded', 'last ' +
 						timeline.prototype.rel_time_str(period) + explain, 'period');
