@@ -32,7 +32,7 @@ stats_view.prototype.load_channel = function(new_channel) {
 	this.channel = new_channel;
 
 	if (this.channel === null) {
-		bc.set_path([]);
+		this.navaid.set_path([]);
 		return;
 	}
 
@@ -61,6 +61,8 @@ stats_view.prototype.load_channel = function(new_channel) {
 	/* Channel type */
 	var svc_data = this.state.nodes[node_addr][svc_id];
 	var chan_cnt = this.state.get_svc_channel_counts(svc_data);
+	var is_sensor = !(datatype in chan_cnt && chan_id < chan_cnt[datatype][0]) ||
+		chan_id < chan_cnt[datatype][1];
 	var ch_type = (datatype in chan_cnt && chan_id < chan_cnt[datatype][0]) ?
 		(chan_id < chan_cnt[datatype][1] ?
 			[ 'read-only (Sensor)', 'Sensor channels are read-only and represent ' +
@@ -110,15 +112,117 @@ stats_view.prototype.load_channel = function(new_channel) {
 				var explain = '';
 				if (events.length === this_obj.API_MAX_VALUES) {
 					period -= events[0][0] - ts_start;
+					ts_start = events[0][0];
 					explain += '<p class="stats-explain">There were over ' +
 						this_obj.API_MAX_VALUES + ' events registered for this channel ' +
 						'in the last 365 days and they could not be loaded in one ' +
 						'request.</p>';
 				}
 
-				/* TODO: graph in time */
+				/* Basic value in time graph */
 
-				/* TODO: hysteresis graph */
+				var datatype = this_obj.channel[2];
+				var basic_type = 'float';
+				if (datatype === 'switch' || datatype === 'presence')
+					basic_type = 'bool';
+				else if (datatype === 'count' || datatype === 'serviceId')
+					basic_type = 'int';
+
+				/* TODO: replace Google with something opensource, e.g. this looks
+				 * good but canvas-only: http://canvasjs.com/docs/charts/basics-of-creating-html5-chart/zooming-panning/, there are some zoomable D3.js examples too */
+				/* TODO: type tricks so that values show as "On" / "Off" for switches,
+				 * etc.  Support for RGB values, etc.  */
+
+				var chart0_div = document.createElement('div');
+				var chart0 = new google.visualization.LineChart(chart0_div);
+
+				var chart0_data = new google.visualization.DataTable();
+				chart0_data.addColumn({ type: 'datetime', id: 'Timestamp' });
+				/* Only 'number' supported, we'll "simulate" booleans below */
+				chart0_data.addColumn({ type: 'number', id: 'value',
+						label: chan_name });
+				/*
+				 * Really should use google.visualization.Timeline() for booleans
+				 * and similar but that doesn't support the "explorer" mode and
+				 * other parameters.
+				 */
+
+				var last_val = null;
+				function add_point(ts, val) {
+					/*
+					 * For boolean, integer, string, etc. values we need to emit
+					 * two rows for each data point so that there's a clear jump
+					 * from one value to the other at the time of the data point,
+					 * no diagonal line suggesting interpolation from one value
+					 * to another.  The interpolation might only work for channels
+					 * of continuous types (float) that are sensors, never for
+					 * acutators.
+					 */
+					var interp = is_sensor && basic_type === 'float';
+
+					/* Adapt types if needed */
+					if (basic_type === 'bool' && val !== null)
+						val = val ? 1 : 0;
+
+					if (!interp && last_val !== null)
+						chart0_data.addRow([ new Date(ts * 1000 - 10), last_val ]);
+					chart0_data.addRow([ new Date(ts * 1000), val ]);
+
+					last_val = val;
+				}
+
+				if (events.length !== this_obj.API_MAX_VALUES)
+					if (events.length && events[0][0] > ts_start)
+						add_point(ts_start, init_val);
+				for (var i = 0; i < events.length; i++)
+					add_point(events[i][0], events[i][1]);
+
+				var chart0_opts = {
+					title: 'Basic channel value in time plot',
+					explorer: {
+						axis: 'horizontal',
+						keepInBounds: true,
+						maxZoomIn: 0.0001,
+						maxZoomOut: 1.01,
+					},
+					animation: 300,
+					lineWidth: 3,
+					hAxis: {
+						minValue: new Date(ts_start * 1000),
+						maxValue: new Date(),
+					},
+					vAxis: {
+					},
+				};
+
+				if (basic_type === 'bool') {
+					chart0_opts.vAxis.minValue = -0.05;
+					chart0_opts.vAxis.maxValue = 1.05;
+					if (datatype === 'switch') {
+						chart0_opts.vAxis.ticks = [
+							{ v: 0, f: 'Off' },
+							{ v: 1, f: 'On' }
+						];
+					} else {
+						chart0_opts.vAxis.ticks = [
+							{ v: 0, f: 'False' },
+							{ v: 1, f: 'True' }
+						];
+					}
+					/* TODO: also show these custom values in tooltips -- looks like we
+					 * need to attach a tooltip role to each data point though.  */
+				}
+
+				chart0_div.classList.add('stats-val-in-time');
+				this_obj.hist_info.appendChild(chart0_div);
+				chart0.draw(chart0_data, chart0_opts);
+
+				/* TODO: github-style days of activity chart */
+				/*https://developers.google.com/chart/interactive/docs/gallery/calendar*/
+
+				/* TODO: hysteresis graphs, also customized for types (e.g. pie for
+				 * all types with finite number of values?) */
+				/* TODO: activity by hour */
 
 				this_obj.append_info('Period loaded', 'last ' +
 						timeline.prototype.rel_time_str(period) + explain, 'period');
@@ -136,6 +240,17 @@ stats_view.prototype.load_channel = function(new_channel) {
 						'TODO', 'errors');
 			});
 }
+/*
+ * Google's jsapi uses document.write() which only work for pages served as
+ * HTML content-type, not XHTML for example.  The "callback:" below is a
+ * workaround that makes jsapi mysteriously use doucemnt.createElement()
+ * instead.  Source:
+ * https://groups.google.com/forum/#!topic/google-ajax-search-api/ZIfUgB4iSLU
+ */
+google.load("visualization", "1", {
+			packages: [ "corechart" ],
+			callback: function() {},
+		});
 
 stats_view.prototype.append_info = function(param, value, cls) {
 	var par = document.createElement('p');
