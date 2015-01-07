@@ -260,9 +260,11 @@ timeline.prototype.rel_time_str = function(secs, fmt) {
 	if (num < 3.0 && i < units.length - 2) {
 		secs -= Math.floor(num) * units[i];
 		num = secs / units[i + 2];
-		s += ' ' + Math.floor(num);
-		var mult = (num >= 2.0 || num < 1.0) && units[i + 3].substr(-1) != 's';
-		s += ' ' + units[i + 3] + (mult ? 's' : '');
+		if (num >= 1.0) {
+			s += ' ' + Math.floor(num);
+			var mult = (num >= 2.0 || num < 1.0) && units[i + 3].substr(-1) != 's';
+			s += ' ' + units[i + 3] + (mult ? 's' : '');
+		}
 	}
 
 	if (fmt == 'ago')

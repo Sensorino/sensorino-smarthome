@@ -3,6 +3,8 @@ function nodebrowser(obj, sensorino_state, handler) {
 	this.state = sensorino_state;
 	this.nodes = {};
 
+	obj.classList.add('browser');
+
 	this.click_handler = function(evt) {
 		var chan = evt.target;
 		while (!('chan_num' in chan))

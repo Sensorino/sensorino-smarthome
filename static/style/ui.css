@@ -378,7 +378,7 @@ button {
 
   padding: 20px;
   margin: 30px;
-  width: 300px;
+  width: 260px;
 
   border-radius: 9px;
   -moz-border-radius: 9px;
@@ -449,4 +449,66 @@ button {
 }
 .browser-chan-unknown {
   opacity: 0.5;
+}
+
+.breadcrumbs {
+  white-space: nowrap;
+  font-size: 12pt;
+  font-family: "Verdana";
+  color: #888;
+}
+
+.breadcrumbs-elem {
+  white-space: nowrap;
+  padding: 5px 15px;
+  padding-right: 0;
+  background: #eee;
+}
+.breadcrumbs-elem:after {
+  margin-left: 15px;
+  padding: 10px;
+  background: white;
+  content: ">";
+}
+.breadcrumbs-elem:last-child {
+  font-weight: bold;
+}
+.breadcrumbs-elem:last-child:after {
+  padding: 0;
+  content: "";
+}
+
+#stats {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#stats-browser {
+  position: absolute;
+  left: 0;
+  width: 350px;
+}
+
+#stats-details {
+  position: absolute;
+  left: 350px;
+  padding: 30px;
+  top: 50px;
+
+  font-size: 14pt;
+  font-family: "Verdana";
+}
+
+#stats-breadcrumbs {
+  position: absolute;
+  left: 350px;
+  padding: 40px;
+}
+
+.stats-param {
+  color: #666;
+}
+.stats-explain {
+  color: #aaa;
+  font-size: 8pt;
 }

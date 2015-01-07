@@ -218,6 +218,7 @@ sensorino_state.prototype.set_channel = function(addr, value, done) {
 		options.body[type_name] = all_values;
 
 		function set_error(err) {
+			console.log(err);
 			if (err.statusCode === undefined)
 				done('Can\'t connect');
 			else if (err.body.length)
@@ -399,6 +400,7 @@ sensorino_state.prototype.request_state_at_timestamp =
 	var ago = now - timestamp;
 
 	function load_error(err) {
+		console.log(err);
 		if (err.statusCode === undefined)
 			handler(null, 'Can\'t connect');
 		else if (err.body.length)
@@ -431,6 +433,40 @@ temporary_state.prototype.subscribe = function(addr, handler) {}
 temporary_state.prototype.unsubscribe = function(addr, handler) {}
 temporary_state.prototype.subscribe_updates = function(handler) {}
 temporary_state.prototype.unsubscribe_updates = function(handler) {}
+
+sensorino_state.prototype.request_values_over_period =
+	function(path, timestamp0, timestamp1, handler) {
+	/*
+	 * Use the "ago=" parameter to the API call, instead of "at=", to
+	 * reduce the dependency on server and client timezone difference and
+	 * clock synchronisation.  Unfortunately network delays may be a
+	 * problem for some users when passing "ago=".
+	 */
+	var now = Date.now() * 0.001;
+	var ago0 = now - timestamp0;
+	var ago1;
+	if (timestamp1 !== undefined)
+		ago1 = now - timestamp1;
+
+	function load_error(err) {
+		console.log(err);
+		if (err.statusCode === undefined)
+			handler(null, 'Can\'t connect');
+		else if (err.body.length)
+			handler(null, 'Server message: ' + err.body);
+		else
+			handler(null, 'Error ' + err.statusCode + ' loading historical state.');
+	}
+
+	function load_done(list) {
+		handler(list);
+	}
+
+	var url = '/api/' + path.join('/') + '/value.json?ago0=' + ago0
+	if (timestamp1 !== undefined)
+		url += '&ago1=' + ago1
+	oboe(url).fail(load_error).done(load_done);
+}
 
 /* From MDN */
 if (!String.prototype.startsWith) {

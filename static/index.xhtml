@@ -17,6 +17,7 @@
   <script type="application/javascript" src="ui/console.js"></script>
   <script type="application/javascript" src="ui/timeline.js"></script>
   <script type="application/javascript" src="ui/browser.js"></script>
+  <script type="application/javascript" src="ui/stats.js"></script>
   <script type="application/javascript"><![CDATA[
 function init() {
   window.sensorino = new sensorino_state();
@@ -42,7 +43,7 @@ function panel_floorplan_init(panel) {
   window.addEventListener('resize', resize_canvas, false);
   resize_canvas();
 
-  var fp = new floorplan(canvas, sensorino);
+  window.fp = new floorplan(canvas, sensorino);
 
   /* Mode selection widget */
   var handler = new panels('floorplan');
@@ -65,6 +66,22 @@ function panel_floorplan_init(panel) {
   }
 
   new choice('fp-mode-choice', handler);
+}
+
+function panel_stats_init(panel) {
+  var bc = new breadcrumbs(
+      document.getElementById('stats-breadcrumbs'));
+  var details = new stats_view(
+      document.getElementById('stats-details'), sensorino, bc, fp);
+
+  var selected = null;
+  /* TODO: hilight selected node */
+  /* TODO: multiple selection & 2d & 3d graphs for this */
+  var browser = new nodebrowser(
+      document.getElementById('stats-browser'), sensorino, function(addr) {
+        selected = addr;
+	details.load_channel(addr);
+      });
 }
 
 function panel_console_init(panel) {
@@ -136,8 +153,10 @@ function stop_echo(echo) {
    <div id="fp-unused-warning" />
   </div>
 
-  <div class="panel c1" id="stats" panel-name="Statistics View" panel-tip="Statistical charts for current and historical sensor data and your usage of actuators">
-   TODO
+  <div class="panel c1" id="stats" panel-name="Statistics View" panel-tip="Browse charts for current and historical sensor data and your usage of actuators">
+   <div id="stats-browser" />
+   <div id="stats-breadcrumbs" />
+   <div id="stats-details" />
   </div>
 
   <div class="panel c2" id="rules" panel-name="Automation" panel-tip="View, create or modify rules that automate your home">
