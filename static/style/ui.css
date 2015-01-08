@@ -450,6 +450,14 @@ button {
 .browser-chan-unknown {
   opacity: 0.5;
 }
+.browser-chan-selected, .browser-chan-selected:hover {
+  padding: 5px 10px;
+  border: 2px solid #444;
+  margin: 8px;
+  box-shadow: 0 0 14px 1 #888;
+  -moz-box-shadow: 0 0 14px 1 #888;
+  -webkit-box-shadow: 0 0 14px 1 #888;
+}
 
 .breadcrumbs {
   white-space: nowrap;

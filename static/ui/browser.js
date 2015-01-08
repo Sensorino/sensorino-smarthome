@@ -2,6 +2,7 @@ function nodebrowser(obj, sensorino_state, handler) {
 	this.obj = obj;
 	this.state = sensorino_state;
 	this.nodes = {};
+	this.selection = {};
 
 	obj.classList.add('browser');
 
@@ -17,7 +18,8 @@ function nodebrowser(obj, sensorino_state, handler) {
 		while (!('chan_num' in chan))
 			chan = chan.parentNode;
 		var chan_name = chan.chan_type.substr(0, 1).toUpperCase() +
-			chan.chan_type.substr(1) + ' ' + chan.chan_num + ' in service ' +
+			chan.chan_type.substr(1) + ' ' + chan.chan_num + ' ' +
+			(chan.is_sensor ? 'sensor' : 'actuator') + ' in service ' +
 			chan.svc_id + ' in Node ' + chan.node_addr;
 		set_tip(chan_name, 'browser');
 	}
@@ -172,10 +174,51 @@ nodebrowser.prototype.update_chan = function(node_addr, svc_id, typ, chan_num,
 	else
 		chan.classList.remove('browser-chan-unknown');
 
+	if ([ chan.node_addr, chan.svc_id, chan.chan_type, chan.chan_num ] in
+			this.selection)
+		chan.classList.add('browser-chan-selected');
+	else
+		chan.classList.remove('browser-chan-selected');
+
+	chan.is_sensor = is_sensor_chan;
 	chan.classList.add(is_sensor_chan ?
 				'browser-chan-sensor' : 'browser-chan-actuator');
 	chan.classList.remove(!is_sensor_chan ?
 				'browser-chan-sensor' : 'browser-chan-actuator');
+}
+
+nodebrowser.prototype.select = function(addr) {
+	/* Don't automatically deselect previous select, allow multiple selection
+	 * (at least in theory) */
+	this.selection[addr] = 1;
+
+	if (!(addr[0] in this.nodes))
+		return;
+	var nd = this.nodes[addr[0]];
+	if (!(addr[1] in nd.services))
+		return;
+	var svc = nd.services[addr[1]];
+	var chan_id = addr[2] + '_' + addr[3];
+	if (!(chan_id in svc.channels))
+		return;
+	this.update_chan(addr[0], addr[1], addr[2], addr[3],
+			svc.channels[chan_id].is_sensor);
+}
+
+nodebrowser.prototype.deselect = function(addr) {
+	delete this.selection[addr];
+
+	if (!(addr[0] in this.nodes))
+		return;
+	var nd = this.nodes[addr[0]];
+	if (!(addr[1] in nd.services))
+		return;
+	var svc = nd.services[addr[1]];
+	var chan_id = addr[2] + '_' + addr[3];
+	if (!(chan_id in svc.channels))
+		return;
+	this.update_chan(addr[0], addr[1], addr[2], addr[3],
+			svc.channels[chan_id].is_sensor);
 }
 
 /* vim: ts=2:

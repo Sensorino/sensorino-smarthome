@@ -76,13 +76,15 @@ function panel_stats_init(panel) {
   var details = new stats_view(
       document.getElementById('stats-details'), sensorino, bc, fp);
 
-  var selected = null;
-  /* TODO: hilight selected node */
   /* TODO: multiple selection & 2d & 3d graphs for this */
+  var selected = null;
   var browser = new nodebrowser(
       document.getElementById('stats-browser'), sensorino, function(addr) {
+        if (selected !== null)
+          browser.deselect(selected);
         selected = addr;
-	details.load_channel(addr);
+        browser.select(selected);
+        details.load_channel(addr);
       });
 }
 
