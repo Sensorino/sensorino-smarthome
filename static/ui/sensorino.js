@@ -15,6 +15,7 @@ function sensorino_state() {
 		cbs.forEach(function(cb) { cb(path, oldval, newval, err); });
 	}
 
+	var chan_only_update;
 	function update_all(path, state, parent, update, err) {
 		var path_elem = path[path.length - 1];
 
@@ -48,8 +49,12 @@ function sensorino_state() {
 				parent[path_elem] = state;
 			}
 
-			if (oldval !== newval) /* Do we want to use != here? */
+			if (oldval !== newval) { /* Do we want to use != here? */
 				notify(path, oldval, newval, err);
+
+				if (path.length != 4 || oldval === null || newval === null)
+					chan_only_update = 0;
+			}
 		}
 
 		if (new_recurse) {
@@ -87,7 +92,7 @@ function sensorino_state() {
 		if (!Array.isArray(obj)) {
 			reset_state(obj);
 
-			this_obj.update_listeners.forEach(function(cb) { cb([[[]]]); });
+			this_obj.update_listeners.forEach(function(cb) { cb[0]([[[]]]); });
 			return;
 		}
 
@@ -102,6 +107,7 @@ function sensorino_state() {
 		}
 
 		/* Now we know this is an event -- a list of state elements that changed */
+		chan_only_update = 1;
 		for (var i = 0; i < obj.length; i++) {
 			if (obj[i].length != 2) {
 				console.log('Invalid change JSON', obj[i]);
@@ -114,8 +120,10 @@ function sensorino_state() {
 			for (var j = 0; j < path.length - 1; j++) {
 				var path_elem = path[j];
 
-				if (!(path_elem in state_elem))
+				if (!(path_elem in state_elem)) {
 					state_elem[path_elem] = {};
+					chan_only_update = 0;
+				}
 				state_elem = state_elem[path_elem];
 			}
 
@@ -124,7 +132,10 @@ function sensorino_state() {
 					state_elem, update, err);
 		}
 
-		this_obj.update_listeners.forEach(function(cb) { cb(obj); });
+		this_obj.update_listeners.forEach(function(cb) {
+					if (cb[1] || !chan_only_update)
+						cb[0](obj);
+				});
 	}
 
 	function update_status(stat, next) {
@@ -158,13 +169,16 @@ sensorino_state.prototype.unsubscribe = function(addr, handler) {
 		delete this.listeners[addr];
 }
 
-sensorino_state.prototype.subscribe_updates = function(handler) {
-	this.update_listeners.push(handler);
+sensorino_state.prototype.subscribe_updates = function(handler, all) {
+	this.update_listeners.push([ handler, !!all ]);
 }
 
 sensorino_state.prototype.unsubscribe_updates = function(handler) {
-	var idx = this.update_listeners.indexOf(handler);
-	this.update_listeners.splice(idx, 1);
+	for (var idx = 0; idx < this.update_listeners.length; idx++)
+		if (this.update_listeners[idx][0] == handler) {
+			this.update_listeners.splice(idx, 1);
+			return;
+		}
 }
 
 sensorino_state.prototype.get_channel = function(addr) {
