@@ -137,6 +137,7 @@ function floorplan(canvas, sensorino_state) {
 			'tip': 'Delete sensor object',
 			'fun': function(o) {
 				canvas.remove(o.obj);
+				o.widget.cleanup();
 				remove_elem(o);
 				this_obj.update_unused_services();
 			},
@@ -866,6 +867,8 @@ floorplan.prototype.clear_state = function() {
 
 		if ('obj' in elem)
 			this.canvas.remove(elem.obj);
+		if ('widget' in elem)
+			elem.widget.cleanup();
 	}
 
 	this.elems = [];

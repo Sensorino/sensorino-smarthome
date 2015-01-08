@@ -64,6 +64,11 @@ function sensor_text(canvas, elem) {
 	update(null);
 }
 
+/* The creator must call this when widget is deleted or we'll leak references */
+sensor_text.prototype.cleanup = function() {
+	this.set_state(null);
+}
+
 function sensor_switch(canvas, elem) {
 	var channel = elem.channels[0];
 	var value = 'dummy';
@@ -157,6 +162,11 @@ function sensor_switch(canvas, elem) {
 	}
 
 	update(null);
+}
+
+/* The creator must call this when widget is deleted or we'll leak references */
+sensor_switch.prototype.cleanup = function() {
+	this.set_state(null);
 }
 
 /* TODO: slider sensor */

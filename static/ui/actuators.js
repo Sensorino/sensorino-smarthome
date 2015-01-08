@@ -137,6 +137,11 @@ function actuator_switch(canvas, elem) {
 	update(null, false);
 }
 
+/* The creator must call this when widget is deleted or we'll leak references */
+actuator_switch.prototype.cleanup = function() {
+	this.set_state(null);
+}
+
 /* TODO: slider actuator */
 /* TODO: xy "slider" actuator */
 /* TODO: rgb chooser -- is there anything in Fabric.js? */
