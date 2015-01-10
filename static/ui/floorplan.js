@@ -33,11 +33,23 @@ function floorplan(canvas, sensorino_state) {
 				remove_elem(elem.to);
 		}
 
+		if (selected === elem)
+			deselect(); /* Might also trigger reselection if we knew mouse coords */
+
 		modified = true;
 	}
 
 	/* Menus */
 	/* TODO: extract image paths from the stylesheet */
+
+	function remove_obj(o) {
+		canvas.remove(o.obj);
+		if ('widget' in o)
+			o.widget.cleanup();
+		remove_elem(o);
+		if (o.type === 'se' || o.type === 'ac')
+			this_obj.update_unused_services();
+	}
 
 	var create_menu = {
 		'thick': {
@@ -88,7 +100,7 @@ function floorplan(canvas, sensorino_state) {
 	var line_menu = {
 		'delete': {
 			'tip': 'Delete line',
-			'fun': function(o) { canvas.remove(o.obj); remove_elem(o); },
+			'fun': remove_obj,
 			'url': 'img/trashcan.png'
 		},
 		'thick': {
@@ -111,7 +123,7 @@ function floorplan(canvas, sensorino_state) {
 	var text_menu = {
 		'delete': {
 			'tip': 'Delete label',
-			'fun': function(o) { canvas.remove(o.obj); remove_elem(o); },
+			'fun': remove_obj,
 			'url': 'img/trashcan.png'
 		},
 		'edit': {
@@ -135,12 +147,7 @@ function floorplan(canvas, sensorino_state) {
 	var sensor_menu = {
 		'delete': {
 			'tip': 'Delete sensor object',
-			'fun': function(o) {
-				canvas.remove(o.obj);
-				o.widget.cleanup();
-				remove_elem(o);
-				this_obj.update_unused_services();
-			},
+			'fun': remove_obj,
 			'url': 'img/trashcan.png'
 		},
 	};
@@ -149,7 +156,7 @@ function floorplan(canvas, sensorino_state) {
 	var actuator_menu = {
 		'delete': {
 			'tip': 'Delete actuator control',
-			'fun': sensor_menu.delete.fun,
+			'fun': remove_obj,
 			'url': 'img/trashcan.png'
 		},
 	};
