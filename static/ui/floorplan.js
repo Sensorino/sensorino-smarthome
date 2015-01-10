@@ -315,26 +315,30 @@ function floorplan(canvas, sensorino_state) {
 		}
 
 		var cls = map[type];
-		/* TODO: this part will be async */
-		var channels = this_obj.query_channels(
-				cls.prototype.channel_reqs, elem_type == 'ac');
-		if (channels === null)
-			return;
 
-		var elem = add_elem(o.x, o.y, elem_type);
-		elem.dsp_type = type;
-		elem.channels = channels;
+		function do_add(channels) {
+			var elem = add_elem(o.x, o.y, elem_type);
+			elem.dsp_type = type;
+			elem.channels = channels;
 
-		elem.widget = new cls(canvas, elem);
-		elem.widget.set_state(sensorino_state);
-		elem.obj.elem = elem; /* For move/rotate callbacks' use */
-		elem.obj.selectable = true;
-		elem.obj.set({ left: elem.x, top: elem.y });
-		canvas.add(elem.obj);
+			elem.widget = new cls(canvas, elem);
+			elem.widget.set_state(sensorino_state);
+			elem.obj.elem = elem; /* For move/rotate callbacks' use */
+			elem.obj.selectable = true;
+			elem.obj.set({ left: elem.x, top: elem.y });
+			canvas.add(elem.obj);
 
-		edit_mode_modified({ 'target': elem.obj });
+			edit_mode_modified({ 'target': elem.obj });
 
-		this_obj.update_unused_services();
+			this_obj.update_unused_services();
+		}
+
+		this_obj.query_channels_poormans(
+				cls.prototype.channel_reqs, elem_type == 'ac', function(channels) {
+					if (channels === null)
+						return;
+					do_add(channels);
+				});
 	}
 
 	function view_mode_mouse_down(o) {
@@ -881,11 +885,10 @@ floorplan.prototype.clear_state = function() {
 	this.elems = [];
 };
 
-/* TODO: make graphical and async, move to a different class/file,
- * when only one channel of given type then display it as just type addr.
- * when only one type in a service then only show the service addr.
+/* TODO: make graphical, move to a different class/file,
  */
-floorplan.prototype.query_channels = function(reqs, is_actuator) {
+floorplan.prototype.query_channels_poormans = function(reqs, is_actuator,
+		cb) {
 	var unused = [];
 	var channels = [];
 	var all = this.sensorino_state.get_channel_lists()[is_actuator ? 1 : 0];
@@ -924,14 +927,17 @@ floorplan.prototype.query_channels = function(reqs, is_actuator) {
 		if (options.length)
 			def = options[0].split(' ', 1)[0];
 		var resp = prompt(msg, def);
-		if (resp === null)
-			return null;
+		if (resp === null) {
+			cb(null);
+			return;
+		}
 
 		/* TODO: allow any address as long as the components are valid */
 		var channel = this.sensorino_state.parse_channel(resp);
 		if (!(channel in all_map)) {
 			alert('Invalid channel address.');
-			return null;
+			cb(null);
+			return;
 		}
 
 		var idx = unused.indexOf(channel);
@@ -940,7 +946,8 @@ floorplan.prototype.query_channels = function(reqs, is_actuator) {
 		channels.push(channel);
 	}
 
-	return channels;
+	cb(channels);
+	return;
 };
 
 floorplan.prototype.update_unused_services = function() {
