@@ -430,9 +430,9 @@ button {
 .browser-chan:hover {
   padding: 7px 12px;
   margin: 8px;
-  box-shadow: 0 0 14px 1 #888;
-  -moz-box-shadow: 0 0 14px 1 #888;
-  -webkit-box-shadow: 0 0 14px 1 #888;
+  box-shadow: 0 0 14px 1px #888;
+  -moz-box-shadow: 0 0 14px 1px #888;
+  -webkit-box-shadow: 0 0 14px 1px #888;
 }
 .browser-channame {
   text-transform: uppercase;
@@ -442,10 +442,10 @@ button {
   font-family: "Verdana";
 }
 .browser-chan-sensor {
-  background-color: #e6e;
+  background-color: #89f;
 }
 .browser-chan-actuator {
-  background-color: #89f;
+  background-color: #e6e;
 }
 .browser-chan-unknown {
   opacity: 0.5;
@@ -454,9 +454,9 @@ button {
   padding: 5px 10px;
   border: 2px solid #444;
   margin: 8px;
-  box-shadow: 0 0 14px 1 #888;
-  -moz-box-shadow: 0 0 14px 1 #888;
-  -webkit-box-shadow: 0 0 14px 1 #888;
+  box-shadow: 0 0 14px 1px #888;
+  -moz-box-shadow: 0 0 14px 1px #888;
+  -webkit-box-shadow: 0 0 14px 1px #888;
 }
 
 .breadcrumbs {
