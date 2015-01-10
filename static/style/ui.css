@@ -527,3 +527,58 @@ button {
   /* Looks like this must to be hardcoded, Google Charts default won't work */
   height: 350px;
 }
+
+.popup {
+  background-color: white;
+  padding: 20px;
+
+  /* Centering */
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 20px;
+
+  border-radius: 20px;
+  -moz-border-radius: 20px;
+  -webkit-border-radius: 20px;
+  box-shadow: 0 0 20px 1px #888;
+  -moz-box-shadow: 0 0 20px 1px #888;
+  -webkit-box-shadow: 0 0 20px 1px #888;
+}
+.popup-bg {
+  background-color: rgba(192, 192, 192, 0.3);
+}
+
+.selector-actuator {
+  background-color: #f9f;
+}
+.selector-sensor {
+  background-color: #abf;
+}
+.selector-actuator, .selector-sensor {
+  padding: 2px 5px;
+  border-radius: 6px;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+}
+
+.selector-info {
+  font-size: 14pt;
+  font-family: "Verdana";
+}
+
+.selector {
+  max-height: 90%;
+  overflow-y: auto;
+}
+
+/* Try to make the web browser put the nodes in two columns if needed */
+.selector {
+  /* Max two columns of nodes, their width is specified by .browser-node */
+  max-width: 800px;
+}
+.selector-browser .browser-node {
+  display: inline-block;
+}
+.selector-browser {
+  text-align: center;
+}

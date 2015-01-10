@@ -35,13 +35,13 @@ function nodebrowser(obj, sensorino_state, handler) {
 	 */
 	var this_obj = this;
 	this.update_handler = function() { this_obj.update_nodes(); };
-	sensorino_state.subscribe_updates(this.update_handler);
+	this.state.subscribe_updates(this.update_handler);
 	this.update_nodes();
 }
 
 /* The creator must call this when widget is deleted or we'll leak references */
 nodebrowser.prototype.cleanup = function() {
-	sensorino_state.unsubscribe_updates(this.update_handler);
+	this.state.unsubscribe_updates(this.update_handler);
 }
 
 nodebrowser.prototype.update_nodes = function() {

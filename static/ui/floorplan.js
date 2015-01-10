@@ -333,7 +333,7 @@ function floorplan(canvas, sensorino_state) {
 			this_obj.update_unused_services();
 		}
 
-		this_obj.query_channels_poormans(
+		this_obj.query_channels(
 				cls.prototype.channel_reqs, elem_type == 'ac', function(channels) {
 					if (channels === null)
 						return;
@@ -885,8 +885,6 @@ floorplan.prototype.clear_state = function() {
 	this.elems = [];
 };
 
-/* TODO: make graphical, move to a different class/file,
- */
 floorplan.prototype.query_channels_poormans = function(reqs, is_actuator,
 		cb) {
 	var unused = [];
@@ -947,7 +945,76 @@ floorplan.prototype.query_channels_poormans = function(reqs, is_actuator,
 	}
 
 	cb(channels);
-	return;
+};
+
+/*
+ * TODO: possibly allow selecting N channels from one nodebrowser object,
+ * e.g. by allowing multiple selection, although that would not preserve
+ * the channel ordering, or perhaps by drag-and-dropping channels from the
+ * browser widget onto a list of channel reqs.
+ * TODO: add a "cancel" button and/or handle Esc keypress.
+ */
+floorplan.prototype.query_channels = function(reqs, is_actuator,
+		cb) {
+	var unused = [];
+	var channels = [];
+	var all = this.sensorino_state.get_channel_lists()[is_actuator ? 1 : 0];
+
+	/* .indexOf() won't work for checking if a channel is present in "all"
+	 * because it uses pointer comparison.  We could use .find or .includes/
+	 * .contains() and they polyfills from MDN but probably it's simplest
+	 * and possibly faster to use an object.
+	 */
+	var all_map = {};
+	all.forEach(function(chan) { all_map[chan] = chan; });
+
+	/* Get a list of unused channels of the type indicated by is_actuator */
+	this.unused.forEach(function(chan) {
+			if (chan in all_map)
+				unused.push(chan);
+		});
+
+	var done = 0;
+	var query_popup;
+	var query_browser;
+	function query_next() {
+		var next = done;
+		var msg = 'Please select <span class="selector-' +
+			(is_actuator ? 'actuator' : 'sensor') + '">' +
+			(is_actuator ? 'an actuator' : 'a sensor') +
+			'</span> data channel to be used as input channel ' + (next + 1) +
+			' of ' + reqs.length + ' required by this widget.  The following ' +
+			'type is expected: ' + reqs[next] + '.';
+		/* TODO: mark matching unused channels visually */
+
+		/* TODO: allow typing in any address as long as the components look valid */
+
+		var browser_div = document.createElement('div');
+		var info_div = document.createElement('div');
+
+		query_popup = new popup();
+		query_popup.obj.classList.add('selector');
+		query_popup.obj.appendChild(info_div);
+		query_popup.obj.appendChild(browser_div);
+
+		info_div.innerHTML = msg;
+		browser_div.classList.add('selector-browser');
+		query_browser = new nodebrowser(browser_div, sensorino, browser_cb);
+	}
+
+	function browser_cb(channel) {
+		channels.push(channel);
+		done++;
+
+		query_popup.close();
+		query_browser.cleanup();
+
+		if (done >= reqs.length)
+			cb(channels);
+		else
+			query_next();
+	}
+	query_next();
 };
 
 floorplan.prototype.update_unused_services = function() {
