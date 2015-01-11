@@ -3,6 +3,7 @@ function nodebrowser(obj, sensorino_state, handler) {
 	this.state = sensorino_state;
 	this.nodes = {};
 	this.selection = {};
+	this.hilighted = {};
 
 	obj.classList.add('browser');
 
@@ -85,6 +86,11 @@ nodebrowser.prototype.update_node = function(node_addr) {
 		('_name' in node_data ? node_data._name :
 			('_addr' in node_data ? node_data._addr : node_addr));
 
+	if ([ node_addr ] in this.hilighted)
+		node.classList.add('browser-hilight');
+	else
+		node.classList.remove('browser-hilight');
+
 	/* Update services in this node if modified */
 	for (var svc_id in node_data) {
 		if (('' + svc_id).startsWith('_') || svc_id in this.state.special_services)
@@ -123,6 +129,11 @@ nodebrowser.prototype.update_service = function(node_addr, svc_id) {
 
 	svc.name.textContent = '_name' in svc_data ?
 		svc_data._name : 'Service ' + svc_id;
+
+	if ([ node_addr, svc_id ] in this.hilighted)
+		svc.classList.add('browser-hilight');
+	else
+		svc.classList.remove('browser-hilight');
 
 	/* Update channels in this service if modified */
 	var chan_cnt = this.state.get_svc_channel_counts(svc_data);
@@ -190,6 +201,12 @@ nodebrowser.prototype.update_chan = function(node_addr, svc_id, typ, chan_num,
 	else
 		chan.classList.remove('browser-chan-selected');
 
+	if ([ chan.node_addr, chan.svc_id, chan.chan_type, chan.chan_num ] in
+			this.hilighted)
+		chan.classList.add('browser-hilight');
+	else
+		chan.classList.remove('browser-hilight');
+
 	chan.is_sensor = is_sensor_chan;
 	chan.classList.add(is_sensor_chan ?
 				'browser-chan-sensor' : 'browser-chan-actuator');
@@ -229,6 +246,14 @@ nodebrowser.prototype.deselect = function(addr) {
 		return;
 	this.update_chan(addr[0], addr[1], addr[2], addr[3],
 			svc.channels[chan_id].is_sensor);
+}
+
+nodebrowser.prototype.hilight = function(addrs) {
+	this.hilighted = {};
+	var this_obj = this;
+	addrs.forEach(function(addr) { this_obj.hilighted[addr] = null; });
+
+	this.update_nodes();
 }
 
 /* vim: ts=2:

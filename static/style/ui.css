@@ -459,6 +459,10 @@ button {
   -webkit-box-shadow: 0 0 14px 1px #888;
 }
 
+.browser-hilight .browser-channame {
+  text-decoration: underline;
+}
+
 .breadcrumbs {
   white-space: nowrap;
   font-size: 12pt;

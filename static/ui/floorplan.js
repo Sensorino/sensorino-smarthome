@@ -984,8 +984,9 @@ floorplan.prototype.query_channels = function(reqs, is_actuator,
 			(is_actuator ? 'an actuator' : 'a sensor') +
 			'</span> data channel to be used as input channel ' + (next + 1) +
 			' of ' + reqs.length + ' required by this widget.  The following ' +
-			'type is expected: ' + reqs[next] + '.';
-		/* TODO: mark matching unused channels visually */
+			'type is expected: ' + reqs[next] + '.<br />' +
+			'As yet unassigned ' + (is_actuator ? 'actuator' : 'sensor') +
+			' channels have been underlined.';
 
 		/* TODO: allow typing in any address as long as the components look valid */
 
@@ -1000,11 +1001,15 @@ floorplan.prototype.query_channels = function(reqs, is_actuator,
 		info_div.innerHTML = msg;
 		browser_div.classList.add('selector-browser');
 		query_browser = new nodebrowser(browser_div, sensorino, browser_cb);
+		query_browser.hilight(unused);
 	}
 
 	function browser_cb(channel) {
 		channels.push(channel);
 		done++;
+
+		var idx = unused.indexOf(channel);
+		unused.splice(idx, 1);
 
 		query_popup.close();
 		query_browser.cleanup();
