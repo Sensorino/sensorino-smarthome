@@ -44,7 +44,7 @@ for svc_id in relay_svcs:
 			True, True))
 
 def handle_20s_timeout():
-	switches[0].set_value(not switches[0].get_value())
+	switches[0].publish_value(not switches[0].get_value())
 
 base_lib.base_init()
 last_ts = time.time()

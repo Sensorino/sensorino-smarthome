@@ -48,9 +48,17 @@ class base_node(object):
 
 	def add_service(self, svc):
 		self.services[svc.get_id()] = svc
+		svc.nodes.append(self)
 
 		# TODO: if comms initialised,
 		# send a "discovery" message from the node's Service Manager?
+
+	def send_message(self, partialmsg):
+		global base_addr
+		msg = { 'from': self.get_addr(), 'to': base_addr }
+		msg.update(partialmsg)
+		# At some point we may want to append to a queue instead
+		base_send_obj(msg)
 
 class base_service(object):
 	def __init__(self, svc_id):
@@ -59,6 +67,7 @@ class base_service(object):
 		self.svc_id = svc_id
 		self.channels = {}
 		self.name = None
+		self.nodes = []
 
 	def get_id(self):
 		return self.svc_id
@@ -84,6 +93,7 @@ class base_service(object):
 		if channel.is_actuator():
 			idx = 1
 		self.channels[channel.get_type()][idx].append(channel)
+		channel.services.append(self)
 
 	def get_chan_values(self, types):
 		ret = {}
@@ -114,10 +124,29 @@ class base_service(object):
 		return ret
 
 	def set_values(self, value_map):
+		# Or should we use a channel object to value map?
 		for type, num in value_map:
 			val = value_map[( type, num )]
+			chans = self.channels[type]
 			# Might want to check if new != old here.
-			self.channels[type][1][num].set_value(val)
+			(chans[0] + chans[1])[num].set_value(val)
+
+	def publish_values(self, value_map):
+		self.set_values(value_map)
+
+		msg = {
+			'type': 'publish',
+			'serviceId': self.get_id(),
+		}
+		for type, num in value_map:
+			chans = self.channels[type]
+			if type not in msg:
+				msg[type] = []
+			while len(msg[type]) <= num:
+				msg[type].append((chans[0] + chans[1]) \
+						[len(msg[type])].get_value())
+		for node in self.nodes:
+			node.send_message(msg)
 
 class base_channel(object):
 	def __init__(self, type, writable, init_val=None):
@@ -126,6 +155,7 @@ class base_channel(object):
 		self.writable = writable
 		self.name = None
 		self.value = init_val
+		self.services = []
 
 	def get_type(self):
 		return self.type
@@ -140,22 +170,27 @@ class base_channel(object):
 		# send a message with datatype == _chan_names to server?
 
 	def set_value(self, new_value):
-		self.value = new_value
-
-		# For writable (actuator) channels this should not be
-		# called by client code because those channels are assumed
-		# to never publish by themselves, only on server's request.
+		# This method should not be called directly by client code,
+		# .publish_value() or the service's publish_values() should
+		# be used instead, they will do the same thing plus they'll
+		# notify the server of the new value.  If the channel is
+		# writable (actuator), it is generally assumed to not change
+		# its value spontaneously, only on server's request.
 		#
-		# Overload this function to add a handler for a single
-		# channel, or overload the service's set_values function
+		# Overload this function to add a new value handler for a
+		# single channel, or overload the service's set_values method
 		# to handle all the new values at once.
 
-		# For read-only (sensor) channels, client code should either
-		# call this, or the service's set_values method to publish
-		# a new value.
-		if not self.writable:
-			# TODO: actually send a message to the base
-			pass
+		self.value = new_value
+
+	def publish_value(self, new_value):
+		for svc in self.services:
+			chans = svc.channels[self.type]
+			chan_num = (chans[0] + chans[1]).index(self)
+
+			svc.publish_values({
+					( self.type, chan_num ): new_value
+				})
 
 	def get_value(self):
 		return self.value
@@ -227,15 +262,17 @@ def base_handle_set(node, svc, msg):
 				})
 			return
 
+		offset = len(svc.channels[type][0])
 		for chan_num, val in enumerate(vallist):
-			channels[( type, chan_num )] = val
+			channels[( type, chan_num + offset )] = val
 
 	# Special case: if a SET message contains no values and is
 	# addressed at a service with one actuator channel of a boolean type,
 	# flip that channel's value.
 	if not len(channels) and 'switch' in svc.channels and \
 			len(svc.channels['switch'][1]):
-		channels[( 'switch', 0 )] = \
+		offset = len(svc.channels['switch'][0])
+		channels[( 'switch', 0 + offset )] = \
 			not svc.channels['switch'][1][0].get_value()
 	elif not len(channels):
 		base_send_obj({
