@@ -40,6 +40,9 @@ class message_dict(dict):
 	def __contains__(self, key):
 		return super(message_dict, self).__contains__(key.lower())
 
+	def pop(self, key, *args):
+		return super(message_dict, self).pop(key.lower(), *args)
+
 def addr_from_msg(msg, addrtype):
 	return int(msg[addrtype])
 
