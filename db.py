@@ -25,6 +25,18 @@ def sqlite_to_datatype(val):
 		return datatype_by_num[val]
 	return val
 
+# Bools:
+# Use an "adapter" for python to sqlite conversion, but convert back
+# manually -- we could use a "converter" but those are always passed
+# a string and we'd need to implement many more conversions.  They'd be
+# a nice solution if it wasn't for that.
+sqlite3.register_adapter(bool, lambda b: buffer('\x01' if b else ''))
+
+def sqlite_to_value(obj):
+	if isinstance(obj, buffer):
+		return len(obj) > 0
+	return obj
+
 def tree_insert_value(state, path, value):
 	# Create a dict for the node if first sighting
 	if path[0] not in state:
@@ -137,8 +149,7 @@ class connection():
 		val = self.cur.fetchone()
 		if val is None:
 			return None
-		# TODO: bool conversion?
-		return val[0]
+		return sqlite_to_value(val[0])
 
 	def get_tree_at_timestamp(self, timestamp):
 		params = ()
@@ -174,9 +185,7 @@ class connection():
 				if chan_id is not None:
 					path += ( chan_id, )
 
-			# TODO: bool conversion?
-
-			tree_insert_value(tree, path, value)
+			tree_insert_value(tree, path, sqlite_to_value(value))
 
 		return tree
 
@@ -205,8 +214,8 @@ class connection():
 		if len(path) >= 4:
 			params[5] = path[3]
 
-		# TODO: bool conversion?
-		return [ ( 0.001 * timestamp, value ) for timestamp, value in
+		return [ ( 0.001 * timestamp, sqlite_to_value(value) ) for \
+			timestamp, value in \
 			self.cur.execute(query, tuple(params)) ][::-1]
 
 	def save_value(self, timestamp, path, value):
