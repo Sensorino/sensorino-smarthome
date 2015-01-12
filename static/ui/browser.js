@@ -47,26 +47,27 @@ nodebrowser.prototype.cleanup = function() {
 
 nodebrowser.prototype.update_nodes = function() {
 	/* Update nodes if modified */
-	for (var node_addr in this.state.nodes) {
-		if (('' + node_addr).startsWith('_'))
+	for (var node_addr_str in this.state.nodes) {
+		if (('' + node_addr_str).startsWith('_'))
 			continue;
 
-		this.update_node(node_addr);
+		this.update_node(node_addr_str);
 	}
 
 	/* Drop nodes no longer existing */
-	for (var node_addr in this.nodes)
-		if (!(node_addr in this.state.nodes)) {
-			this.obj.removeChild(this.nodes[node_addr]);
-			delete this.nodes[node_addr];
+	for (var node_addr_str in this.nodes)
+		if (!(node_addr_str in this.state.nodes)) {
+			this.obj.removeChild(this.nodes[node_addr_str]);
+			delete this.nodes[node_addr_str];
 		}
 }
 
-nodebrowser.prototype.update_node = function(node_addr) {
-	var node_data = this.state.nodes[node_addr];
+nodebrowser.prototype.update_node = function(node_addr_str) {
+	var node_data = this.state.nodes[node_addr_str];
+	var node_addr = node_data._addr;
 
 	/* Create new node box if node is new */
-	if (!(node_addr in this.nodes)) {
+	if (!(node_addr_str in this.nodes)) {
 		var node = document.createElement('div');
 		node.classList.add('browser-node');
 		node.name = document.createElement('span');
@@ -76,42 +77,44 @@ nodebrowser.prototype.update_node = function(node_addr) {
 		this.obj.appendChild(node);
 
 		node.services = {};
-		this.nodes[node_addr] = node;
+		this.nodes[node_addr_str] = node;
 	}
 
 	/* Update contents */
-	var node = this.nodes[node_addr];
+	var node = this.nodes[node_addr_str];
 
 	node.name.textContent = 'Node ' +
 		('_name' in node_data ? node_data._name :
-			('_addr' in node_data ? node_data._addr : node_addr));
+			('_addr' in node_data ? node_data._addr : node_addr_str));
 
-	if ([ node_addr ] in this.hilighted)
+	if ([ node_addr_str ] in this.hilighted)
 		node.classList.add('browser-hilight');
 	else
 		node.classList.remove('browser-hilight');
 
 	/* Update services in this node if modified */
-	for (var svc_id in node_data) {
-		if (('' + svc_id).startsWith('_') || svc_id in this.state.special_services)
+	for (var svc_id_str in node_data) {
+		if (('' + svc_id_str).startsWith('_') ||
+				svc_id_str in this.state.special_services)
 			continue;
 
-		this.update_service(node_addr, svc_id);
+		this.update_service(node_addr, svc_id_str);
 	}
 
 	/* Drop services no longer existing */
-	for (var svc_id in node.services)
-		if (!(svc_id in node_data)) {
-			node.removeChild(node.services[svc_id]);
-			delete node.services[svc_id];
+	for (var svc_id_str in node.services)
+		if (!(svc_id_str in node_data)) {
+			node.removeChild(node.services[svc_id_str]);
+			delete node.services[svc_id_str];
 		}
 }
 
-nodebrowser.prototype.update_service = function(node_addr, svc_id) {
-	var svc_data = this.state.nodes[node_addr][svc_id];
+nodebrowser.prototype.update_service = function(node_addr, svc_id_str) {
+	var svc_data = this.state.nodes[node_addr][svc_id_str];
+	var svc_id = parseInt(svc_id_str);
 
 	/* Create new service box if new service */
-	if (!(svc_id in this.nodes[node_addr].services)) {
+	if (!(svc_id_str in this.nodes[node_addr].services)) {
 		var svc = document.createElement('div');
 		svc.classList.add('browser-svc');
 		svc.name = document.createElement('span');
@@ -121,14 +124,14 @@ nodebrowser.prototype.update_service = function(node_addr, svc_id) {
 		this.nodes[node_addr].appendChild(svc);
 
 		svc.channels = {};
-		this.nodes[node_addr].services[svc_id] = svc;
+		this.nodes[node_addr].services[svc_id_str] = svc;
 	}
 
 	/* Update contents */
-	var svc = this.nodes[node_addr].services[svc_id];
+	var svc = this.nodes[node_addr].services[svc_id_str];
 
 	svc.name.textContent = '_name' in svc_data ?
-		svc_data._name : 'Service ' + svc_id;
+		svc_data._name : 'Service ' + svc_id_str;
 
 	if ([ node_addr, svc_id ] in this.hilighted)
 		svc.classList.add('browser-hilight');
