@@ -11,6 +11,7 @@ import sensorino
 import sys
 import socket
 import asyncore
+import json
 
 class obj_parser():
 	def __init__(self):
@@ -54,17 +55,31 @@ class sensorino_base_handler(asyncore.dispatcher_with_send):
 
 		self.client_address = addr
 		self.server = server
-
-		self.server.bases.append(self)
+		self.name = None
 
 		self.parser = obj_parser()
+
+	def handshake(self, obj):
+		try:
+			hs = json.loads(obj)
+			self.name = hs['base-name']
+
+			if self.name in self.server.bases:
+				raise Exception('Base "' + self.name +
+						'" already exists')
+		except Exception as e:
+			sensorino.log_warn(str(e.args))
+			self.close()
+			return
+
+		self.server.bases[self.name] = self
 
 		sensorino.log_warn('New Base connected')
 
 	def handle_close(self):
 		asyncore.dispatcher.handle_close(self)
 
-		self.server.bases.remove(self)
+		del self.server.bases[self.name]
 
 		sensorino.log_warn('Base disconnected')
 
@@ -72,6 +87,11 @@ class sensorino_base_handler(asyncore.dispatcher_with_send):
 		for chr in self.recv(8192).decode('utf-8'):
 			obj = self.parser.handle_char(chr)
 			if obj is not None:
+				if self.name is None:
+					# This is the handshake message
+					self.handshake(obj)
+					continue
+
 				self.server.handle_obj(obj, self)
 
 	def send_json(self, buffer):
@@ -86,7 +106,7 @@ class sensorino_base_server(asyncore.dispatcher):
 		self.bind(addr)
 		self.listen(5)
 
-		self.bases = []
+		self.bases = {}
 		self.obj_handlers = []
 
 	def handle_accept(self):

@@ -59,6 +59,14 @@ sys.stderr.write('Connected to serial port ' + port + '\n')
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect(config.base_server_address)
+
+# Introduce ourselves.. for now use the port path as our ID.  This has some
+# disadvantages, other options could be for the firmware to introduce itself
+# instead of the "gateway" script and it could use its chip serial or EEPROM
+# radio address.
+base_name = socket.gethostname() + ',' + port
+s.sendall(('{ "base-name": "' + base_name + '" }').encode('utf8'))
+
 sys.stderr.write('Connected to server\n')
 
 while 1:

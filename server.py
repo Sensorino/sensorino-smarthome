@@ -215,7 +215,7 @@ def httpd_request_handler(raw_req, conn):
 	# "Smarthome" object, and make the different "Smarthomes"
 	# different entities inside the UI, so that we know exactly which
 	# base we're talking to.
-	base_server.bases[0].send_json(raw_req)
+	base_server.bases[base_server.bases.keys()[0]].send_json(raw_req)
 
 	console.handle_line(False, valid, raw_req, timestamp)
 
@@ -256,7 +256,7 @@ def discovery_request_handler(req):
 	# "Smarthome" object, and make the different "Smarthomes"
 	# different entities inside the UI, so that we know exactly which
 	# base we're talking to.
-	base_server.bases[0].send_json(req_str)
+	base_server.bases[base_server.bases.keys()[0]].send_json(req_str)
 
 	console.handle_line(False, valid, req_str, timestamp)
 

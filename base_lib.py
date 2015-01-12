@@ -405,10 +405,13 @@ def base_handle_input(msg):
 s = None
 parse_state = None
 
-def base_init():
+def base_init(base_name):
 	global s, parse_state
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.connect(config.base_server_address)
+
+	# Introduce ourselves
+	base_send_obj({ 'base-name': base_name })
 
 	parse_state = base_server.obj_parser()
 
