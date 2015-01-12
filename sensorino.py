@@ -643,7 +643,7 @@ class sensorino_state():
 
 		return changes
 
-	def update_state(self, timestamp, msg, addr, is_set):
+	def update_state(self, timestamp, msg, addr, base_id, is_set):
 		'''Process an incoming or outgoing message such as Publish
 		or Set and see what state changes it implies.  Update our
 		local copy of the state and the database.'''
@@ -663,6 +663,15 @@ class sensorino_state():
 			changes.append(( addr, ))
 
 		node_state = self.state[addr]
+
+		if '_base' not in node_state and base_id is not None:
+			node_state['_base'] = base_id
+
+			ref = self.storage.save_value(timestamp,
+					( addr, '_base' ), base_id)
+			change_refs.append(ref)
+
+			changes.append(( addr, '_base' ))
 
 		# Find the service in question
 		service_ids = copy.copy(valuelist_from_msg(msg, 'serviceId'))
@@ -793,14 +802,14 @@ class sensorino_state():
 	# about the input message (e.g. presence of a field or value type),
 	# you must include a check in the relevant validate function first.
 
-	def handle_publish(self, timestamp, msg):
+	def handle_publish(self, timestamp, msg, base_id):
 		addr = addr_from_msg(msg, 'from')
 
 		self.queued_success(addr)
 
-		self.update_state(timestamp, msg, addr, False)
+		self.update_state(timestamp, msg, addr, base_id, False)
 
-	def handle_error(self, timestamp, msg):
+	def handle_error(self, timestamp, msg, base_id):
 		if 'from' in msg:
 			addr = addr_from_msg(msg, 'from')
 		else:
@@ -811,23 +820,23 @@ class sensorino_state():
 
 		self.queued_failure(addr)
 
-	def handle_request(self, timestamp, msg, callback = None):
+	def handle_request(self, timestamp, msg, base_id, callback = None):
 		self.enqueue(msg, callback)
 
 		# There's no specific action that we need to take on
 		# this.
 
-	def handle_set(self, timestamp, msg, callback = None):
+	def handle_set(self, timestamp, msg, base_id, callback = None):
 		addr = addr_from_msg(msg, 'to')
 
 		self.enqueue(msg, callback)
 
 		change_set, change_refs = \
-			self.update_state(timestamp, msg, addr, True)
+			self.update_state(timestamp, msg, addr, base_id, True)
 
 		self.queued_change_set(change_set, change_refs)
 
-	def handle_invalid_incoming(self, timestamp, msg):
+	def handle_invalid_incoming(self, timestamp, msg, base_id):
 		if 'from' in msg:
 			addr = addr_from_msg(msg, 'from')
 		else:
@@ -836,7 +845,7 @@ class sensorino_state():
 		# Questionable.. but assume failure if timeout not expired
 		self.queued_failure(addr)
 
-	def handle_invalid_outgoing(self, timestamp, msg):
+	def handle_invalid_outgoing(self, timestamp, msg, base_id):
 		try:
 			addr = addr_from_msg(msg, 'to')
 		except:
@@ -853,3 +862,8 @@ class sensorino_state():
 
 	def get_state_at_timestamp(self, timestamp):
 		return self.storage.get_tree_at_timestamp(timestamp)
+
+	def get_base_for_addr(self, addr):
+		if addr in self.state and '_base' in self.state[addr]:
+			return self.state[addr]['_base']
+		return None
