@@ -160,6 +160,10 @@ class base_channel(object):
 	def get_type(self):
 		return self.type
 
+	def get_chan_num(self, svc):
+		chans = svc.channels[self.type]
+		return (chans[0] + chans[1]).index(self)
+
 	def is_actuator(self):
 		return self.writable
 
@@ -185,8 +189,7 @@ class base_channel(object):
 
 	def publish_value(self, new_value):
 		for svc in self.services:
-			chans = svc.channels[self.type]
-			chan_num = (chans[0] + chans[1]).index(self)
+			chan_num = self.get_chan_num(svc)
 
 			svc.publish_values({
 					( self.type, chan_num ): new_value
