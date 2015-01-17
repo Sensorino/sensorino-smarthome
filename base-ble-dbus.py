@@ -300,6 +300,7 @@ class bt_characteristic(object):
 
 		self.props.connect_to_signal('PropertiesChanged',
 				self.properties_changed)
+		self.poll_id = None
 
 	def active(self):
 		if self.is_active:
@@ -312,13 +313,15 @@ class bt_characteristic(object):
 			self.char.StartNotify()
 		except Exception as e:
 			print('Characteristic StartNotify() failed: ' + str(e))
+			self.poll_id = gobject.timeout_add(self.poll_interval,
+					self.poll)
 		try:
-			val = self.char.ReadValue()
+			self.val = self.char.ReadValue()
 		except Exception as e:
 			print('Characteristic ReadValue() failed: ' + str(e))
 			return
 
-		self.handler(val)
+		self.handler(self.val)
 
 	def inactive(self):
 		if not self.is_active:
@@ -332,12 +335,31 @@ class bt_characteristic(object):
 		except Exception as e:
 			print('Characteristic StopNotify() failed: ' + str(e))
 
+		if self.poll_id is not None:
+			gobject.source_remove(self.poll_id)
+			self.poll_id = None
+
 		self.publish_values(*[ None for chan in self.channels ])
 
 	def properties_changed(self, interface, changed, invalidated):
+		if self.poll_id is not None:
+			return
 		if interface == bluezutils.GATT_CHAR_INTERFACE and \
 				'Value' in changed:
-			self.handler(changed['Value'])
+			self.val = changed['Value']
+			self.handler(self.val)
+
+	def poll(self):
+		try:
+			new_val = self.char.ReadValue()
+		except Exception as e:
+			print('Characteristic ReadValue() failed: ' + str(e))
+			return
+		if self.val != new_val:
+			self.val = new_val
+			self.handler(self.val)
+
+		return True
 
 	def publish_values(self, *args):
 		value_map = {}
