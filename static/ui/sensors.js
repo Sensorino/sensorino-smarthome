@@ -16,7 +16,16 @@ function sensor_text(canvas, elem) {
 		var old_val = value;
 		value = new_val;
 
-		var content = '' + (value !== null ? value : channel);
+		var content = '' +
+			(value !== null && value !== undefined ? value : channel);
+
+		/* Up to 3 fractional digits depending on the magnitude */
+		if (typeof value == "number") {
+			var str = '' + value;
+			var idx = str.indexOf('.');
+			if (idx > -1)
+				content = str.substr(0, idx >= 3 ? idx + 2 : 5);
+		}
 
 		elem.obj.setText(content);
 		canvas.renderAll();
