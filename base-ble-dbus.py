@@ -17,6 +17,7 @@ import dbus
 import dbus.mainloop.glib
 import gobject
 import bluezutils
+import math
 
 import base_lib
 
@@ -370,6 +371,78 @@ class bt_characteristic(object):
 
 # Sensor Tag characteristics
 
+class sensor_tag_ir_temperature_char(bt_characteristic):
+	uuid = 'f000aa01-0451-4000-b000-000000000000'
+	config_uuid = 'f000aa02-0451-4000-b000-000000000000'
+
+	def __init__(self, path, dev):
+		super(sensor_tag_ir_temperature_char, self). \
+			__init__(path, dev)
+
+		self.channels = [
+			self.service.create_channel('temperature', False),
+			self.service.create_channel('temperature', False),
+		]
+		self.channels[0].set_name('Ambient temperature')
+		self.channels[1].set_name('Object temperature')
+
+		self.enabled = False
+		self.poll_interval = 5000
+		gobject.timeout_add(1000, self.enable_sensor)
+
+	def enable_sensor(self):
+		svc_path = self.props.Get(bluezutils.GATT_CHAR_INTERFACE,
+				'Service')
+		cfg_path = None
+
+		objs = bluezutils.get_managed_objects(bus)
+		for path, interfaces in objs.iteritems():
+			if bluezutils.GATT_CHAR_INTERFACE not in interfaces or \
+					not path.startswith(svc_path):
+				continue
+			char = interfaces[bluezutils.GATT_CHAR_INTERFACE]
+			if char['UUID'] == self.config_uuid:
+				cfg_path = path
+
+		cfg_obj = bus.get_object(bluezutils.SERVICE_NAME, cfg_path)
+		cfg_char = dbus.Interface(cfg_obj,
+				bluezutils.GATT_CHAR_INTERFACE)
+
+		cfg_char.WriteValue([ 0x01 ])
+
+		self.enabled = True
+		return False
+
+	def handler(self, val):
+		if not self.is_active or not self.enabled:
+			return
+
+		# Ambient / Die temperature
+		temp0 = ((val[3] << 8) | val[2]) / 128.0
+
+		# Target / Object temperature
+		raw1 = (val[1] << 8) | val[0]
+		if raw1 > 32767:
+			raw1 -= 65536
+		vobj = raw1 * 0.00000015625
+		tdie = temp0 + 273.15
+		s0 = 5.593E-14
+		a1 = 1.75E-3
+		a2 = -1.678E-5
+		b0 = -2.94E-5
+		b1 = -5.7E-7
+		b2 = 4.63E-9
+		c2 = 13.4
+		tref = 298.15
+		s = s0 * (1 + a1 * (tdie - tref) + a2 * \
+			math.pow(tdie - tref, 2))
+		vos = b0 + b1 * (tdie - tref) + b2 * \
+			math.pow(tdie - tref, 2)
+		fobj = (vobj - vos) + c2 * math.pow(vobj - vos, 2)
+		temp1 = math.pow(math.pow(tdie, 4) + fobj / s, 0.25) - 273.15
+
+		self.publish_values(temp0, temp1)
+
 class sensor_tag_simple_key_service_char(bt_characteristic):
 	uuid = '0000ffe1-0000-1000-8000-00805f9b34fb'
 
@@ -391,7 +464,8 @@ class sensor_tag_simple_key_service_char(bt_characteristic):
 		self.publish_values((val[0] >> 0) & 1, (val[0] >> 1) & 1)
 
 char_classes = [
-	sensor_tag_simple_key_service_char,
+	sensor_tag_ir_temperature_char,
+	#sensor_tag_simple_key_service_char,
 ]
 for char_class in char_classes:
 	known_characteristics[char_class.uuid] = char_class
