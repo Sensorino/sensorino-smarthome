@@ -44,7 +44,7 @@ class message_dict(dict):
 		return super(message_dict, self).pop(key.lower(), *args)
 
 def addr_from_msg(msg, addrtype):
-	return int(msg[addrtype])
+	return msg[addrtype]
 
 def valuelist_from_msg(msg, datatype):
 	val = msg[datatype]
@@ -121,6 +121,9 @@ def valuelist_validate_types(vallist, datatype):
 		allowed_types.append(int)
 	if basic_type == str:
 		allowed_types.append(unicode)
+	# Also allow "null"s for anything except Service IDs, DataTypes, Counts
+	if datatype not in [ 'count', 'serviceId', 'dataType' ]:
+		allowed_types.append(type(None))
 	# TODO: might also want to allow ints for bools if 0 or 1
 
 	if any([ type(val) not in allowed_types for val in vallist ]):
@@ -132,9 +135,9 @@ def valuelist_validate_types(vallist, datatype):
 			raise Exception('\'' + datatype + \
 					'\' can\'t be negative')
 	if datatype == 'serviceId':
-		if any([ val < 0 or val > 255 for val in vallist ]):
+		if any([ val < 0 for val in vallist ]):
 			raise Exception('\'' + datatype + \
-					'\' must be between 0 and 255')
+					'\' must be a non-negative integer')
 	if datatype == 'dataType':
 		for val in vallist:
 			if val in known_datatypes_dict:
@@ -149,8 +152,8 @@ def validate_incoming_publish(msg):
 		addr = addr_from_msg(msg, 'from')
 	except:
 		raise Exception('\'' + str(msg['from']) + \
-				'\' can\' be parsed as an address')
-	if addr < 1 or addr > 255:
+				'\' can\'t be parsed as an address')
+	if addr == 0:
 		raise Exception('\'' + str(msg['from']) + \
 				'\' is not a valid node address')
 
@@ -160,7 +163,7 @@ def validate_incoming_publish(msg):
 			addr = addr_from_msg(msg, 'to')
 		except:
 			raise Exception('\'' + str(msg['to']) + \
-					'\' can\' be parsed as an address')
+					'\' can\'t be parsed as an address')
 		# Base address == 0 assumption is made here, may need to
 		# be fixed at one point.
 		if addr != 0:
@@ -217,8 +220,8 @@ def validate_incoming_error(msg):
 		addr = addr_from_msg(msg, 'from')
 	except:
 		raise Exception('\'' + str(msg['from']) + \
-				'\' can\' be parsed as an address')
-	if addr < 1 or addr > 255:
+				'\' can\'t be parsed as an address')
+	if addr == 0:
 		raise Exception('\'' + str(msg['from']) + \
 				'\' is not a valid node address')
 
@@ -234,7 +237,7 @@ def validate_request(msg):
 	except:
 		raise Exception('\'' + str(msg['to']) + \
 				'\' can\'t be parsed as an address')
-	if addr < 1 or addr > 255:
+	if addr == 0:
 		raise Exception('\'' + str(msg['to']) + \
 				'\' is not a valid node address')
 
@@ -244,7 +247,7 @@ def validate_request(msg):
 			addr = addr_from_msg(msg, 'from')
 		except:
 			raise Exception('\'' + str(msg['from']) + \
-					'\' can\' be parsed as an address')
+					'\' can\'t be parsed as an address')
 
 	if 'serviceId' not in msg:
 		raise Exception('Messsage is missing a \'serviceId\' field')
@@ -298,7 +301,7 @@ def validate_set(msg):
 	except:
 		raise Exception('\'' + str(msg['to']) + \
 				'\' can\'t be parsed as an address')
-	if addr < 1 or addr > 255:
+	if addr == 0:
 		raise Exception('\'' + str(msg['to']) + \
 				'\' is not a valid node address')
 
@@ -308,7 +311,7 @@ def validate_set(msg):
 			addr = addr_from_msg(msg, 'from')
 		except:
 			raise Exception('\'' + str(msg['from']) + \
-					'\' can\' be parsed as an address')
+					'\' can\'t be parsed as an address')
 
 	if 'serviceId' not in msg:
 		raise Exception('Messsage is missing a \'serviceId\' field')
