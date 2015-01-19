@@ -77,11 +77,18 @@ def characteristic_notify(path, changed):
 		listener(path, changed)
 
 def interfaces_added(path, interfaces):
-	if DEVICE_INTERFACE in interfaces:
+	# TODO: seems like we need to cache all the objects' interfaces
+	# and see if the sum of the already notified interfaces and the new
+	# ones contains the two interfaces that we want, since sometimes
+	# they will not be created at the same times.
+	if DEVICE_INTERFACE in interfaces and \
+			'org.freedesktop.DBus.Properties' in interfaces:
 		device_notify(path, interfaces[DEVICE_INTERFACE])
-	if GATT_SVC_INTERFACE in interfaces:
+	if GATT_SVC_INTERFACE in interfaces and \
+			'org.freedesktop.DBus.Properties' in interfaces:
 		service_notify(path, interfaces[GATT_SVC_INTERFACE])
-	if GATT_CHAR_INTERFACE in interfaces:
+	if GATT_CHAR_INTERFACE in interfaces and \
+			'org.freedesktop.DBus.Properties' in interfaces:
 		characteristic_notify(path, interfaces[GATT_CHAR_INTERFACE])
 
 def properties_changed(interface, changed, invalidated, path):
