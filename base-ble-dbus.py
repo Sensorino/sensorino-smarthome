@@ -117,11 +117,13 @@ class bt_device(object):
 		self.disconnect(dev)
 		return False
 
-	def disconnect(self, dev):
+	def to_free(self):
 		if self.device_busy_timeout is not None:
 			gobject.source_remove(self.device_busy_timeout)
 			self.device_busy_timeout = None
 
+	def disconnect(self, dev):
+		self.to_free()
 		dev.Disconnect()
 
 	def connected(self):
@@ -133,10 +135,8 @@ class bt_device(object):
 		# If this device acutally has characteristics that we're
 		# interested in, we change our mind and will not auto-
 		# disconnect.
-		if self.known_characteristic_paths and \
-				self.device_busy_timeout is not None:
-			gobject.source_remove(self.device_busy_timeout)
-			self.device_busy_timeout = None
+		if self.known_characteristic_paths:
+			self.to_free()
 
 		for path in self.known_characteristic_paths:
 			if path not in self.characteristics:
@@ -153,6 +153,7 @@ class bt_device(object):
 
 		if self in device_queue:
 			device_queue.remove(self)
+		self.to_free()
 
 		name = str(self.addr)
 
@@ -239,8 +240,6 @@ def characteristic_change(path, changed):
 	# re-check all the characteristics when we can read their
 	# descriptors.
 	uuid = props.Get(bluezutils.GATT_CHAR_INTERFACE, 'UUID')
-	if uuid not in known_characteristics:
-		return
 
 	svc_path = props.Get(bluezutils.GATT_CHAR_INTERFACE, 'Service')
 	svc_obj = bus.get_object(bluezutils.SERVICE_NAME, svc_path)
@@ -249,6 +248,16 @@ def characteristic_change(path, changed):
 	dev_path = svc_props.Get(bluezutils.GATT_SVC_INTERFACE, 'Device')
 	# Raise an exception if device doesn't exist
 	dev = bt_device.devices[dev_path]
+
+	# Mark device as discovered and update queue
+	dev.discovered = True
+	if dev.known_characteristic_paths:
+		dev.queue()
+	else:
+		dev.dequeue()
+
+	if uuid not in known_characteristics:
+		return
 
 	dev.handle_characteristic(path, known_characteristics[uuid])
 
@@ -266,7 +275,7 @@ class bt_base_service(base_lib.base_service):
 			if not chan.writable:
 				continue
 			chan_num = chan.get_chan_num(self)
-			act_channels[chan.type, chan_num] = pos
+			self.act_channels[chan.type, chan_num] = pos
 
 	def set_values(self, value_map):
 		super(bt_base_service, self).set_values(value_map)
@@ -282,7 +291,7 @@ class bt_base_service(base_lib.base_service):
 			chars[char_num][chan_id] = value_map[chan_id]
 
 		for char_num in chars:
-			self.gatt_chars[char_num].set_values(chars[chan_num])
+			self.gatt_chars[char_num].set_values(chars[char_num])
 
 class bt_characteristic(object):
 	def __init__(self, path, dev):
@@ -361,6 +370,8 @@ class bt_characteristic(object):
 		self.is_active = False
 
 		# TODO: check if we have any read-only channels registered
+		if self.poll_interval is None:
+			return
 
 		try:
 			self.char.StopNotify()
