@@ -190,7 +190,9 @@ sensorino_state.prototype.get_channel = function(addr) {
 	 * channel number
 	 */
 	try {
-		return this.nodes[addr[0]][addr[1]][addr[2]][addr[3]];
+		var v = this.nodes[addr[0]][addr[1]][addr[2]][addr[3]];
+		if (v !== undefined)
+			return v;
 	} catch(e) {}
 	return null;
 }

@@ -17,7 +17,7 @@ function sensor_text(canvas, elem) {
 		value = new_val;
 
 		var content = '' +
-			(value !== null && value !== undefined ? value : channel);
+			(value !== null ? value : channel);
 
 		/* Up to 3 fractional digits depending on the magnitude */
 		if (typeof value == "number") {
