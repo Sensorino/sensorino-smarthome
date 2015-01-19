@@ -523,7 +523,8 @@ function sensor_rgb(canvas, elem) {
 		});
 
 	function update(new_val, path) {
-		var chan = (channels[0] == path) ? 0 : ((channels[1] == path) ? 1 : 2);
+		var chan = ('' + channels[0] == '' + path) ? 0 :
+				(('' + channels[1] == '' + path) ? 1 : 2);
 		var old_val = value.concat([]);
 		value[chan] = new_val;
 
@@ -535,7 +536,7 @@ function sensor_rgb(canvas, elem) {
 			hex = '#fff';
 		}
 
-		rect.set({ opacity: o, fill: new fabric.Color(hex) });
+		rect.set({ opacity: o, fill: hex });
 		canvas.renderAll();
 	}
 	this.update = update;
