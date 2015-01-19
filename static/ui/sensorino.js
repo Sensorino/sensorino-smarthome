@@ -344,7 +344,7 @@ sensorino_state.prototype.format_channel = function(addr) {
 	var svc = this.nodes[node_addr][svc_id];
 	var chan_cnt = this.get_svc_channel_counts(svc);
 
-	if (Object.keys(chan_cnt).length == 1)
+	if (chan_cnt[data_type][0] == 1 && Object.keys(chan_cnt).length == 1)
 		return str + type_str;
 
 	str += ',' + data_type;
@@ -445,7 +445,7 @@ temporary_state.prototype.format_channel =
 
 temporary_state.prototype.subscribe = function(addr, handler) {}
 temporary_state.prototype.unsubscribe = function(addr, handler) {}
-temporary_state.prototype.subscribe_updates = function(handler) {}
+temporary_state.prototype.subscribe_updates = function(handler, all) {}
 temporary_state.prototype.unsubscribe_updates = function(handler) {}
 
 sensorino_state.prototype.request_values_over_period =
