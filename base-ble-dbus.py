@@ -256,8 +256,36 @@ def characteristic_change(path, changed):
 	dev.handle_characteristic(path, known_characteristics[uuid])
 
 class bt_base_service(base_lib.base_service):
+	def __init__(self, svc_id):
+		super(bt_base_service, self).__init__(svc_id)
+		self.gatt_chars = []
+		self.act_channels = {}
+
+	def add_characteristic(self, char):
+		pos = len(self.gatt_chars)
+		self.gatt_chars.append(char)
+
+		for chan in char.channels:
+			if not chan.writable:
+				continue
+			chan_num = chan.get_chan_num(self)
+			act_channels[chan.type, chan_num] = pos
+
 	def set_values(self, value_map):
 		super(bt_base_service, self).set_values(value_map)
+
+		# Split the value_map by characteristic.. may be unnecessary
+		chars = {}
+		for chan_id in value_map:
+			if chan_id not in self.act_channels:
+				continue
+			char_num = self.act_channels[chan_id]
+			if char_num not in chars:
+				chars[char_num] = {}
+			chars[char_num][chan_id] = value_map[chan_id]
+
+		for char_num in chars:
+			self.gatt_chars[char_num].set_values(chars[chan_num])
 
 class bt_characteristic(object):
 	def __init__(self, path, dev):
@@ -302,6 +330,10 @@ class bt_characteristic(object):
 		self.props.connect_to_signal('PropertiesChanged',
 				self.properties_changed)
 		self.poll_id = None
+		self.poll_interval = None
+
+	def save_channels(self):
+		self.service.add_characteristic(self)
 
 	def active(self):
 		if self.is_active:
@@ -309,6 +341,8 @@ class bt_characteristic(object):
 		self.is_active = True
 
 		# TODO: check if we have any read-only channels registered
+		if self.poll_interval is None:
+			return
 
 		try:
 			self.char.StartNotify()
@@ -340,7 +374,8 @@ class bt_characteristic(object):
 			gobject.source_remove(self.poll_id)
 			self.poll_id = None
 
-		self.publish_values(*[ None for chan in self.channels ])
+		self.publish_values(*[ None for chan in self.channels \
+				if not chan.writable ])
 
 	def properties_changed(self, interface, changed, invalidated):
 		if self.poll_id is not None:
@@ -365,9 +400,12 @@ class bt_characteristic(object):
 	def publish_values(self, *args):
 		value_map = {}
 		for i, chan in enumerate(self.channels):
+			if chan.writable:
+				continue
 			chan_num = chan.get_chan_num(self.service)
 			value_map[chan.type, chan_num] = args[i]
-		self.service.publish_values(value_map)
+		if value_map:
+			self.service.publish_values(value_map)
 
 # Sensor Tag characteristics
 
@@ -383,6 +421,7 @@ class sensor_tag_ir_temperature_char(bt_characteristic):
 			self.service.create_channel('temperature', False),
 			self.service.create_channel('temperature', False),
 		]
+		self.save_channels()
 		self.channels[0].set_name('Ambient temperature')
 		self.channels[1].set_name('Object temperature')
 
@@ -454,6 +493,7 @@ class sensor_tag_simple_key_service_char(bt_characteristic):
 			self.service.create_channel('switch', False),
 			self.service.create_channel('switch', False),
 		]
+		self.save_channels()
 		self.channels[0].set_name('Left button')
 		self.channels[1].set_name('Right button')
 
