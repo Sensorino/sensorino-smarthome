@@ -91,21 +91,18 @@ class bt_device(object):
 
 		name = str(self.addr)
 
-		# Tell bluez to connect to this device for 10s, assume it'll
+		# Tell bluez to connect to this device for 20s, assume it'll
 		# manage to complete all the basic discovery in that time and
 		# call relevant listeners, then .Disconnect if it doesn't do
 		# that earlier automatically.  When we're pairing it seems the
 		# basic discovery is finished at the moment .Pair() returns
 		# but we can't rely on that, .Pair() will fail if .Paired is
 		# True so we must use .Connect() meaning that the discovery
-		# is asynchronous.
+		# is asynchronous.  There are also some devices for which
+		# .Pair() simply always fails.
 		try:
-			if self.discovered or paired:
-				print('Connecting to ' + name)
-				dev.Connect()
-			else:
-				print('Pairing with ' + name + ' for scanning')
-				dev.Pair()
+			print('Connecting to ' + name)
+			dev.Connect()
 		except Exception as e:
 			print('Could not connect to ' + name + ': ' + str(e))
 			self.state = 'unknown'
@@ -113,7 +110,7 @@ class bt_device(object):
 			return
 
 		self.device_busy_timeout = \
-			gobject.timeout_add(10000, self.to_disconnect, dev)
+			gobject.timeout_add(20000, self.to_disconnect, dev)
 
 	def to_disconnect(self, dev):
 		self.device_busy_timeout = None
