@@ -117,7 +117,7 @@ class bt_device(object):
 
 	def to_disconnect(self, dev):
 		self.device_busy_timeout = None
-		self.disconnect()
+		self.disconnect(dev)
 		return False
 
 	def disconnect(self, dev):
