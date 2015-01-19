@@ -511,9 +511,48 @@ class sensor_tag_simple_key_service_char(bt_characteristic):
 
 		self.publish_values((val[0] >> 0) & 1, (val[0] >> 1) & 1)
 
+# Yeelight Blue lightbulb characteristics
+
+class yeelight_blue_bulb_char(bt_characteristic):
+	uuid = '0000fff1-0000-1000-8000-00805f9b34fb'
+
+	def __init__(self, path, dev):
+		super(yeelight_blue_bulb_char, self).__init__(path, dev)
+
+		# TODO: calculate intensity from RGB
+		self.channels = [
+			self.service.create_channel('colorComponent', True),
+			self.service.create_channel('colorComponent', True),
+			self.service.create_channel('colorComponent', True),
+			self.service.create_channel('colorComponent', True),
+		]
+		self.save_channels()
+		self.channels[0].set_name('Red')
+		self.channels[1].set_name('Green')
+		self.channels[2].set_name('Blue')
+		self.channels[3].set_name('Intensity')
+		# TODO: retrieve current values from the characteristic
+
+	def set_values(self, value_map):
+		def clamp(val, max):
+			if val is None or val < 0:
+				return 0
+			if val > max:
+				return max
+			return int(val)
+
+		r = clamp(self.channels[0].get_value(), 255)
+		g = clamp(self.channels[1].get_value(), 255)
+		b = clamp(self.channels[2].get_value(), 255)
+		i = clamp(self.channels[3].get_value(), 100)
+		val = str(r) + ',' + str(g) + ',' + str(b) + ',' + str(i) + \
+			',' * 18
+		self.char.WriteValue(val[:18])
+
 char_classes = [
 	sensor_tag_ir_temperature_char,
 	#sensor_tag_simple_key_service_char,
+	yeelight_blue_bulb_char,
 ]
 for char_class in char_classes:
 	known_characteristics[char_class.uuid] = char_class
