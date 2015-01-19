@@ -344,7 +344,7 @@ function floorplan(canvas, sensorino_state) {
 	function view_mode_mouse_down(o) {
 		/* Is something interactive being clicked on? */
 		if (o.target !== undefined && 'viewmode_onclick' in o.target) {
-			o.target.viewmode_onclick(o.target);
+			o.target.viewmode_onclick(o);
 			return;
 		}
 	}
