@@ -499,8 +499,121 @@ sensor_temp.prototype.cleanup = function() {
 	this.set_state(null);
 }
 
+function sensor_rgb(canvas, elem) {
+	var channels = elem.channels;
+	var value = [ null, null, null ];
+	var state = null;
+
+	var rect = new fabric.Rect({
+			strokeWidth: 4,
+			stroke: '#aaa',
+			fill: '#fff',
+			width: 60,
+			height: 60,
+			rx: 10,
+			ry: 10,
+			originX: 'center',
+			originY: 'center',
+			selectable: false
+		});
+
+	elem.obj = new fabric.Group([ rect ], {
+			originX: 'center',
+			originY: 'center',
+		});
+
+	function update(new_val, path) {
+		var chan = (channels[0] == path) ? 0 : ((channels[1] == path) ? 1 : 2);
+		var old_val = value.concat([]);
+		value[chan] = new_val;
+
+		var hex = print_val();
+		var o = 1;
+		if (hex[0] != '#') {
+			o = 0.5;
+			/* TODO: on null display #abf diagonal stripe pattern */
+			hex = '#fff';
+		}
+
+		rect.set({ opacity: o, fill: new fabric.Color(hex) });
+		canvas.renderAll();
+	}
+	this.update = update;
+
+	function print_val() {
+		function in_range(v) {
+			return v !== null && v >= 0 && v < 256;
+		}
+		function to_hex(v) {
+			return (0x100 + Math.floor(v)).toString(16).substr(-2);
+		}
+
+		if (!in_range(value[0]) || !in_range(value[1]) || !in_range(value[2])) {
+			if (value[0] === null && value[1] === null && value[2] === null)
+				return 'Unknown';
+			return value;
+		}
+
+		return '#' + to_hex(value[0]) + to_hex(value[1]) + to_hex(value[2]);
+	}
+
+	/* TODO: move everything below (and more) to base class */
+
+	elem.obj.viewmode_onover = function(o) {
+		set_tip('Channels ' + state.format_channel(channels[0]) + ' + ' +
+			state.format_channel(channels[1]) + ' + ' +
+			state.format_channel(channels[2]) +
+			', current value: ' + print_val(), 'sensor');
+	};
+	elem.obj.viewmode_onout = function(o) {
+		clear_tip('sensor');
+	};
+
+	elem.obj.histmode_onover = function(o) {
+		set_tip('Channels ' + state.format_channel(channels[0]) + ' + ' +
+			state.format_channel(channels[1]) + ' + ' +
+			state.format_channel(channels[2]) +
+			', value at timestamp: ' + print_val(), 'sensor');
+	};
+	elem.obj.histmode_onout = function(o) {
+		clear_tip('sensor');
+	};
+
+	/* TODO: use subscribe() for individual channel updates and
+	 * subscribe_updates(xxx, true) for actual widget redraw */
+	var handler = function(path, oldval, newval) { update(newval, path); };
+	this.set_state = function(new_state) {
+		if (state === new_state)
+			return;
+
+		if (state !== null) {
+			state.unsubscribe(channels[0], handler);
+			state.unsubscribe(channels[1], handler);
+			state.unsubscribe(channels[2], handler);
+		}
+
+		state = new_state;
+		value = [ null, null, null ];
+
+		if (state !== null) {
+			state.subscribe(channels[0], handler);
+			state.subscribe(channels[1], handler);
+			state.subscribe(channels[2], handler);
+			update(state.get_channel(channels[0]), channels[0]);
+			update(state.get_channel(channels[1]), channels[1]);
+			update(state.get_channel(channels[2]), channels[2]);
+		}
+	}
+
+	update(null);
+}
+
+/* The creator must call this when widget is deleted or we'll leak references */
+sensor_rgb.prototype.cleanup = function() {
+	this.set_state(null);
+}
+
 /* TODO: xy "slider" sensor */
-/* TODO: rgb sensor */
 
 sensor_text.prototype.channel_reqs = [ 'any' ];
 floorplan.prototype.register_sensor(sensor_text, 'text', 'Uses 1 channel, ' +
@@ -521,6 +634,13 @@ sensor_temp.prototype.channel_reqs = [ 'number' ];
 floorplan.prototype.register_sensor(sensor_temp, 'thermometer', 'Uses 1 ' +
 		'channel, ideally of a numeric Data Type (integer, float).  ' +
 		'The value is displayed graphically.  Subtype of the "slider" widget');
+
+sensor_rgb.prototype.channel_reqs = [ 'number', 'number', 'number' ];
+floorplan.prototype.register_sensor(sensor_rgb, 'rgbcolor', 'Uses 3 ' +
+		'channel, ideally of a numeric Data Type such as Color Component.  ' +
+		'The compound value is displayed graphically.  Note that actuator ' +
+		'channels can also be used, perhaps to show the color being set ' +
+		'by three "slider" actuator widgets.');
 
 /* vim: ts=2:
 */
