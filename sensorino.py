@@ -97,6 +97,7 @@ known_datatypes = [
 	( 'count', 50, int ),
 	( 'presence', 51, bool ),
 	( 'switch', 52, bool ),
+	( 'colorComponent', 53, float ),
 ]
 known_datatypes_dict = message_dict({})
 for t, num, py_t in known_datatypes:
