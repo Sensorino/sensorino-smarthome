@@ -60,6 +60,9 @@ class base_node(object):
 		# At some point we may want to append to a queue instead
 		base_send_obj(msg)
 
+class BaseXmitError(Exception):
+	pass
+
 class base_service(object):
 	def __init__(self, svc_id):
 		if not isinstance(svc_id, int):
@@ -286,7 +289,13 @@ def base_handle_set(node, svc, msg):
 			})
 		return
 
-	svc.set_values(channels)
+	try:
+		svc.set_values(channels)
+	except BaseXmitError as e:
+		base_send_obj({ 'error': 'xmitError' })
+	except Exception as e:
+		# TODO: should use a proper 'err' message originating at node
+		base_send_obj({ 'error': str(e) })
 
 def base_handle_request(node, svc, msg):
 	if 'dataType' in msg:

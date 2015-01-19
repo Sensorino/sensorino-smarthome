@@ -262,10 +262,11 @@ def characteristic_change(path, changed):
 	dev.handle_characteristic(path, known_characteristics[uuid])
 
 class bt_base_service(base_lib.base_service):
-	def __init__(self, svc_id):
+	def __init__(self, svc_id, dev):
 		super(bt_base_service, self).__init__(svc_id)
 		self.gatt_chars = []
 		self.act_channels = {}
+		self.dev = dev
 
 	def add_characteristic(self, char):
 		pos = len(self.gatt_chars)
@@ -278,8 +279,6 @@ class bt_base_service(base_lib.base_service):
 			self.act_channels[chan.type, chan_num] = pos
 
 	def set_values(self, value_map):
-		super(bt_base_service, self).set_values(value_map)
-
 		# Split the value_map by characteristic.. may be unnecessary
 		chars = {}
 		for chan_id in value_map:
@@ -291,7 +290,14 @@ class bt_base_service(base_lib.base_service):
 			chars[char_num][chan_id] = value_map[chan_id]
 
 		for char_num in chars:
+			if self.dev.state != 'busy':
+				raise base_lib.BaseXmitError()
+
 			self.gatt_chars[char_num].set_values(chars[char_num])
+
+		# Call this last to ensure state isn't changed if an
+		# exception happens when writing to device
+		super(bt_base_service, self).set_values(value_map)
 
 class bt_characteristic(object):
 	def __init__(self, path, dev):
@@ -316,7 +322,7 @@ class bt_characteristic(object):
 			dev.sensorino_node = base_lib.base_create_node(dev.addr)
 
 		if service_id not in dev.sensorino_services:
-			svc = bt_base_service(service_id)
+			svc = bt_base_service(service_id, dev)
 			dev.sensorino_services[service_id] = svc
 			dev.sensorino_node.add_service(svc)
 
@@ -547,7 +553,11 @@ class yeelight_blue_bulb_char(bt_characteristic):
 		i = clamp(self.channels[3].get_value(), 100)
 		val = str(r) + ',' + str(g) + ',' + str(b) + ',' + str(i) + \
 			',' * 18
-		self.char.WriteValue(val[:18])
+		try:
+			self.char.WriteValue(val[:18])
+		except Exception as e:
+			print('Characteristic WriteValue() failed: ' + str(e))
+			raise
 
 char_classes = [
 	sensor_tag_ir_temperature_char,
