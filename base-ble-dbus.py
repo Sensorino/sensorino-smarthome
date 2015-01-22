@@ -33,7 +33,6 @@ class bt_device(object):
 		self.path = path
 		self.discovered = False
 		self.known_characteristic_paths = {}
-		self.characteristics = {}
 
 		self.sensorino_node = None
 		self.sensorino_services = {}
@@ -138,14 +137,6 @@ class bt_device(object):
 		if self.known_characteristic_paths:
 			self.to_free()
 
-		for path in self.known_characteristic_paths:
-			if path not in self.characteristics:
-				characteristic_class = \
-					self.known_characteristic_paths[path]
-				self.characteristics[path] = \
-					characteristic_class(path, self)
-			self.characteristics[path].active()
-
 	def disconnected(self):
 		global device_queue
 		prev_state = self.state
@@ -162,9 +153,6 @@ class bt_device(object):
 
 			print('Disconnected from ' + name)
 
-			for path in self.characteristics:
-				self.characteristics[path].inactive()
-
 	def handle_characteristic(self, path, cls):
 		if path in self.known_characteristic_paths:
 			return
@@ -172,9 +160,6 @@ class bt_device(object):
 		self.known_characteristic_paths[path] = cls
 		if self.state == 'unknown':
 			self.queue()
-		elif self.state == 'busy':
-			# Make sure we instantiate this characteristic
-			self.connected()
 
 	@staticmethod
 	def busy():
@@ -189,6 +174,9 @@ def run_queue():
 	return False
 
 def device_change(path, changed):
+	if changed is None:
+		return
+
 	if path in bt_device.devices:
 		dev = bt_device.devices[path]
 	else:
@@ -223,43 +211,58 @@ def device_change(path, changed):
 	else:
 		dev.dequeue()
 
-# Services we know how to handle
+# Services' characteristics we know how to handle, class by UUID
 known_characteristics = {}
+
+# Characteristic objects by path
+characteristics = {}
 
 # This is currently only called when the object/interface is created
 def characteristic_change(path, changed):
 	global known_characteristics
 
-	obj = bus.get_object(bluezutils.SERVICE_NAME, path)
-	props = dbus.Interface(obj, 'org.freedesktop.DBus.Properties')
-
-	# TODO: call a function to first check UUID and then also go
-	# through all associated descriptors and figure out based on them
-	# if we could possibly support the characteristic...  If the device
-	# is disconnected though, we'd need to queue it and remember to
-	# re-check all the characteristics when we can read their
-	# descriptors.
-	uuid = props.Get(bluezutils.GATT_CHAR_INTERFACE, 'UUID')
-
-	svc_path = props.Get(bluezutils.GATT_CHAR_INTERFACE, 'Service')
-	svc_obj = bus.get_object(bluezutils.SERVICE_NAME, svc_path)
-	svc_props = dbus.Interface(svc_obj, 'org.freedesktop.DBus.Properties')
-
-	dev_path = svc_props.Get(bluezutils.GATT_SVC_INTERFACE, 'Device')
-	# Raise an exception if device doesn't exist
-	dev = bt_device.devices[dev_path]
-
-	# Mark device as discovered and update queue
-	dev.discovered = True
-	if dev.known_characteristic_paths:
-		dev.queue()
-	else:
-		dev.dequeue()
-
-	if uuid not in known_characteristics:
+	if changed is None:
+		# Characteristic D-Bus object is being remove, i.e. the device
+		# disconnected
+		if path in characteristics and characteristics[path].is_active:
+			characteristics[path].inactive()
 		return
 
-	dev.handle_characteristic(path, known_characteristics[uuid])
+	if path not in characteristics:
+		obj = bus.get_object(bluezutils.SERVICE_NAME, path)
+		props = dbus.Interface(obj, 'org.freedesktop.DBus.Properties')
+
+		# TODO: call a function to first check UUID and then also go
+		# through all associated descriptors and figure out based on
+		# them if we could possibly support the characteristic.
+		uuid = props.Get(bluezutils.GATT_CHAR_INTERFACE, 'UUID')
+
+		svc_path = props.Get(bluezutils.GATT_CHAR_INTERFACE, 'Service')
+		svc_obj = bus.get_object(bluezutils.SERVICE_NAME, svc_path)
+		svc_props = dbus.Interface(svc_obj,
+				'org.freedesktop.DBus.Properties')
+
+		dev_path = svc_props.Get(bluezutils.GATT_SVC_INTERFACE,
+				'Device')
+		# Raise an exception if device doesn't exist
+		dev = bt_device.devices[dev_path]
+
+		# Mark device as discovered and update queue
+		dev.discovered = True
+		if dev.known_characteristic_paths:
+			dev.queue()
+		else:
+			dev.dequeue()
+
+		if uuid not in known_characteristics:
+			return
+
+		dev.handle_characteristic(path, known_characteristics[uuid])
+
+		characteristics[path] = known_characteristics[uuid](path, dev)
+
+	if not characteristics[path].is_active:
+		characteristics[path].active()
 
 class bt_base_service(base_lib.base_service):
 	def __init__(self, svc_id, dev):
@@ -289,15 +292,19 @@ class bt_base_service(base_lib.base_service):
 				chars[char_num] = {}
 			chars[char_num][chan_id] = value_map[chan_id]
 
-		for char_num in chars:
-			if self.dev.state != 'busy':
-				raise base_lib.BaseXmitError()
+		if chars and self.dev.state != 'busy':
+			raise base_lib.BaseXmitError()
 
-			self.gatt_chars[char_num].set_values(chars[char_num])
-
-		# Call this last to ensure state isn't changed if an
-		# exception happens when writing to device
+		# Set values now so that the charactistic's .set_values()
+		# function can use .get_value() on its channels.  Unfortunately
+		# if there's an exception while handling the write operation
+		# we get an inconsistent state.  TODO: either make the
+		# characteristic call .set_value() on every channel (not nice)
+		# or catch the exception, revert values and rethrow.
 		super(bt_base_service, self).set_values(value_map)
+
+		for char_num in chars:
+			self.gatt_chars[char_num].set_values(chars[char_num])
 
 class bt_characteristic(object):
 	def __init__(self, path, dev):

@@ -57,6 +57,10 @@ def init_listeners(bus):
 			dbus_interface = "org.freedesktop.DBus.ObjectManager",
 			signal_name = "InterfacesAdded")
 
+	bus.add_signal_receiver(interfaces_removed,
+			dbus_interface = "org.freedesktop.DBus.ObjectManager",
+			signal_name = "InterfacesRemoved")
+
 	# TODO: also listen for property changes on the other interfaces
 	bus.add_signal_receiver(properties_changed,
 			dbus_interface = "org.freedesktop.DBus.Properties",
@@ -90,6 +94,14 @@ def interfaces_added(path, interfaces):
 	if GATT_CHAR_INTERFACE in interfaces and \
 			'org.freedesktop.DBus.Properties' in interfaces:
 		characteristic_notify(path, interfaces[GATT_CHAR_INTERFACE])
+
+def interfaces_removed(path, interfaces):
+	if DEVICE_INTERFACE in interfaces:
+		device_notify(path, None)
+	if GATT_SVC_INTERFACE in interfaces:
+		service_notify(path, None)
+	if GATT_CHAR_INTERFACE in interfaces:
+		characteristic_notify(path, None)
 
 def properties_changed(interface, changed, invalidated, path):
 	if interface != DEVICE_INTERFACE:
