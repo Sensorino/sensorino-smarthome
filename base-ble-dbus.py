@@ -411,7 +411,7 @@ class bt_characteristic(object):
 			new_val = self.char.ReadValue()
 		except Exception as e:
 			print('Characteristic ReadValue() failed: ' + str(e))
-			return
+			return True
 		if self.val != new_val:
 			self.val = new_val
 			self.handler(self.val)
@@ -446,9 +446,7 @@ class sensor_tag_ir_temperature_char(bt_characteristic):
 		self.channels[0].set_name('Ambient temperature')
 		self.channels[1].set_name('Object temperature')
 
-		self.enabled = False
 		self.poll_interval = 5000
-		gobject.timeout_add(1000, self.enable_sensor)
 
 	def enable_sensor(self):
 		svc_path = self.props.Get(bluezutils.GATT_CHAR_INTERFACE,
@@ -472,6 +470,11 @@ class sensor_tag_ir_temperature_char(bt_characteristic):
 
 		self.enabled = True
 		return False
+
+	def active(self):
+		self.enabled = False
+		gobject.timeout_add(500, self.enable_sensor)
+		super(sensor_tag_ir_temperature_char, self).active()
 
 	def handler(self, val):
 		if not self.is_active or not self.enabled:
