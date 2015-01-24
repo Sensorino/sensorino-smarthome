@@ -428,6 +428,23 @@ class bt_characteristic(object):
 		if value_map:
 			self.service.publish_values(value_map)
 
+	def get_other_char(self, uuid):
+		svc_path = self.props.Get(bluezutils.GATT_CHAR_INTERFACE,
+				'Service')
+		char_path = None
+
+		objs = bluezutils.get_managed_objects(bus)
+		for path, interfaces in objs.iteritems():
+			if bluezutils.GATT_CHAR_INTERFACE not in interfaces or \
+					not path.startswith(svc_path):
+				continue
+			char = interfaces[bluezutils.GATT_CHAR_INTERFACE]
+			if char['UUID'] == uuid:
+				char_path = path
+
+		char_obj = bus.get_object(bluezutils.SERVICE_NAME, char_path)
+		return dbus.Interface(char_obj, bluezutils.GATT_CHAR_INTERFACE)
+
 # Sensor Tag characteristics
 
 class sensor_tag_ir_temperature_char(bt_characteristic):
@@ -435,8 +452,7 @@ class sensor_tag_ir_temperature_char(bt_characteristic):
 	config_uuid = 'f000aa02-0451-4000-b000-000000000000'
 
 	def __init__(self, path, dev):
-		super(sensor_tag_ir_temperature_char, self). \
-			__init__(path, dev)
+		super(sensor_tag_ir_temperature_char, self).__init__(path, dev)
 
 		self.channels = [
 			self.service.create_channel('temperature', False),
@@ -449,24 +465,7 @@ class sensor_tag_ir_temperature_char(bt_characteristic):
 		self.poll_interval = 5000
 
 	def enable_sensor(self):
-		svc_path = self.props.Get(bluezutils.GATT_CHAR_INTERFACE,
-				'Service')
-		cfg_path = None
-
-		objs = bluezutils.get_managed_objects(bus)
-		for path, interfaces in objs.iteritems():
-			if bluezutils.GATT_CHAR_INTERFACE not in interfaces or \
-					not path.startswith(svc_path):
-				continue
-			char = interfaces[bluezutils.GATT_CHAR_INTERFACE]
-			if char['UUID'] == self.config_uuid:
-				cfg_path = path
-
-		cfg_obj = bus.get_object(bluezutils.SERVICE_NAME, cfg_path)
-		cfg_char = dbus.Interface(cfg_obj,
-				bluezutils.GATT_CHAR_INTERFACE)
-
-		cfg_char.WriteValue([ 0x01 ])
+		self.get_other_char(self.config_uuid).WriteValue([ 0x01 ])
 
 		self.enabled = True
 		return False
@@ -474,6 +473,8 @@ class sensor_tag_ir_temperature_char(bt_characteristic):
 	def active(self):
 		self.enabled = False
 		gobject.timeout_add(500, self.enable_sensor)
+
+		# Possibly call this in enable_sensor?
 		super(sensor_tag_ir_temperature_char, self).active()
 
 	def handler(self, val):
@@ -485,8 +486,8 @@ class sensor_tag_ir_temperature_char(bt_characteristic):
 
 		# Target / Object temperature
 		raw1 = (val[1] << 8) | val[0]
-		if raw1 > 32767:
-			raw1 -= 65536
+		if raw1 >= 0x8000:
+			raw1 -= 0x10000
 		vobj = raw1 * 0.00000015625
 		tdie = temp0 + 273.15
 		s0 = 5.593E-14
@@ -505,6 +506,47 @@ class sensor_tag_ir_temperature_char(bt_characteristic):
 		temp1 = math.pow(math.pow(tdie, 4) + fobj / s, 0.25) - 273.15
 
 		self.publish_values(temp0, temp1)
+
+class sensor_tag_humidity_char(bt_characteristic):
+	uuid = 'f000aa21-0451-4000-b000-000000000000'
+	config_uuid = 'f000aa22-0451-4000-b000-000000000000'
+
+	def __init__(self, path, dev):
+		super(sensor_tag_humidity_char, self).__init__(path, dev)
+
+		self.channels = [
+			self.service.create_channel('relativeHumidity', False),
+			self.service.create_channel('temperature', False),
+		]
+		self.save_channels()
+		self.channels[0].set_name('Relative Humidity')
+		self.channels[1].set_name('Ambient temperature')
+
+		self.poll_interval = 5000
+
+	def enable_sensor(self):
+		self.get_other_char(self.config_uuid).WriteValue([ 0x01 ])
+
+		self.enabled = True
+		return False
+
+	def active(self):
+		self.enabled = False
+		gobject.timeout_add(500, self.enable_sensor)
+
+		# Possibly call this in enable_sensor?
+		super(sensor_tag_humidity_char, self).active()
+
+	def handler(self, val):
+		if not self.is_active or not self.enabled:
+			return
+
+		# Ambient / Die temperature
+		temp = -46.85 + ((val[1] << 8) | val[0]) * (175.72 / 65536)
+		# Ambient relative humidity
+		rhum = -6 + (((val[3] << 8) | val[2]) & ~3) * (125.0 / 65536)
+
+		self.publish_values(rhum, temp)
 
 class sensor_tag_simple_key_service_char(bt_characteristic):
 	uuid = '0000ffe1-0000-1000-8000-00805f9b34fb'
@@ -571,6 +613,7 @@ class yeelight_blue_bulb_char(bt_characteristic):
 
 char_classes = [
 	sensor_tag_ir_temperature_char,
+	sensor_tag_humidity_char,
 	#sensor_tag_simple_key_service_char,
 	yeelight_blue_bulb_char,
 ]
