@@ -421,7 +421,7 @@ class bt_characteristic(object):
 	def publish_values(self, *args):
 		value_map = {}
 		for i, chan in enumerate(self.channels):
-			if chan.writable:
+			if chan.writable or chan.get_value() == args[i]:
 				continue
 			chan_num = chan.get_chan_num(self.service)
 			value_map[chan.type, chan_num] = args[i]
