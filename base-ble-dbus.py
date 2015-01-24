@@ -548,6 +548,78 @@ class sensor_tag_humidity_char(bt_characteristic):
 
 		self.publish_values(rhum, temp)
 
+class sensor_tag_barometer_char(bt_characteristic):
+	uuid = 'f000aa41-0451-4000-b000-000000000000'
+	config_uuid = 'f000aa42-0451-4000-b000-000000000000'
+	calib_uuid = 'f000aa43-0451-4000-b000-000000000000'
+
+	def __init__(self, path, dev):
+		super(sensor_tag_barometer_char, self).__init__(path, dev)
+
+		self.channels = [
+			self.service.create_channel('pressure', False),
+			self.service.create_channel('temperature', False),
+		]
+		self.save_channels()
+		self.channels[0].set_name('Barometric pressure')
+		self.channels[1].set_name('Ambient temperature')
+
+		self.poll_interval = 5000
+
+		self.calibration = None
+
+	def enable_sensor(self):
+		cfg_char = self.get_other_char(self.config_uuid)
+
+		if self.calibration is None:
+			# Calibration mode
+			cfg_char.WriteValue([ 0x02 ])
+
+			val = self.get_other_char(self.calib_uuid).ReadValue()
+
+			self.calibration = []
+			for i in xrange(0, 8):
+				c = float((val[i * 2 + 1] << 8) | val[i * 2])
+				self.calibration.append(c)
+			for i in xrange(4, 8):
+				if self.calibration[i] >= 0x8000:
+					self.calibration[i] -= 0x10000
+
+		cfg_char.WriteValue([ 0x01 ])
+
+		self.enabled = True
+		return False
+
+	def active(self):
+		self.enabled = False
+		gobject.timeout_add(500, self.enable_sensor)
+
+		# Possibly call this in enable_sensor?
+		super(sensor_tag_barometer_char, self).active()
+
+	def handler(self, val):
+		if not self.is_active or not self.enabled:
+			return
+
+		# Ambient / Die temperature
+		tr = (val[1] << 8) | val[0]
+		if tr >= 0x8000:
+			tr -= 0x10000
+		temp = self.calibration[0] * tr / (1 << 24) + \
+			self.calibration[1] / (1 << 10)
+
+		# Barometric pressure (note: Pa, not hPa)
+		pr = (val[3] << 8) | val[2]
+		sensitivity = self.calibration[2] + \
+			self.calibration[3] * tr / (1 << 17) + \
+			self.calibration[4] * tr * tr / (1 << 34)
+		offset = self.calibration[5] * (1 << 14) + \
+			self.calibration[6] * tr / (1 << 3) + \
+			self.calibration[7] * tr * tr / (1 << 19)
+		baro = (sensitivity * pr + offset) / (1 << 14)
+
+		self.publish_values(baro, temp)
+
 class sensor_tag_simple_key_service_char(bt_characteristic):
 	uuid = '0000ffe1-0000-1000-8000-00805f9b34fb'
 
@@ -614,6 +686,8 @@ class yeelight_blue_bulb_char(bt_characteristic):
 char_classes = [
 	sensor_tag_ir_temperature_char,
 	sensor_tag_humidity_char,
+	sensor_tag_barometer_char,
+	# Can't support the keys without bluez notification support
 	#sensor_tag_simple_key_service_char,
 	yeelight_blue_bulb_char,
 ]
