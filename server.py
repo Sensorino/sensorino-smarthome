@@ -20,6 +20,7 @@ import base_server
 import api_server
 import discovery
 import db
+import timers
 
 import json
 import socket
@@ -41,7 +42,6 @@ import time
 # * bluelets
 #   (same as cogen, but nicely small and contained)
 #
-import asyncore
 
 class console_log():
 	# Keep this many lines of most recent log data to be present
@@ -290,8 +290,7 @@ print("Serving HTTP on " + httpd_sn[0] + " port " + str(httpd_sn[1]) +
 		" and Base server on " + base_sn[0] + " port " +
 		str(base_sn[1]) + "...")
 try:
-	# TODO: timer support for sensorino error queue timeouts
-	asyncore.loop()
+	timers.loop()
 except KeyboardInterrupt:
 	pass
 db.close()
