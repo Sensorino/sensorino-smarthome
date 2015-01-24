@@ -83,9 +83,14 @@ function panel_stats_init(panel) {
       document.getElementById('stats-browser'), sensorino, function(addr) {
         if (selected !== null)
           browser.deselect(selected);
-        selected = addr;
-        browser.select(selected);
-        details.load_channel(addr);
+        if ('' + selected == addr) { /* Clicking the channel again deselects */
+          selected = null;
+          details.unload();
+        } else {
+          selected = addr;
+          browser.select(selected);
+          details.load_channel(addr);
+        }
       });
 }
 

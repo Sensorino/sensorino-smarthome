@@ -17,6 +17,8 @@ function stats_view(obj, sensorino_state, navaid, floorplan) {
 				packages: [ "corechart", "calendar" ],
 				callback: function() {},
 			});
+
+	this.unload();
 }
 
 /*
@@ -34,12 +36,11 @@ stats_view.prototype.load_channel = function(new_channel) {
 	if (this.channel == new_channel)
 		return;
 
+	if (this.channel !== null)
+		this.unload(true);
+
 	this.obj.innerHTML = '';
 	delete this.hist_info;
-
-	if (this.channel !== null) {
-		/* TODO: unsubscribe */
-	}
 
 	this.channel = new_channel;
 
@@ -304,6 +305,17 @@ stats_view.prototype.load_channel = function(new_channel) {
 				this_obj.append_info('Number of errors reported in relation to channel',
 						'TODO', 'errors');
 			});
+}
+
+stats_view.prototype.unload = function(noclean) {
+	/* TODO: unsubscribe from current channel if any */
+
+	this.channel = null;
+
+	if (!noclean) {
+		this.navaid.set_path([ 'Smart home', 'No channel selected' ]);
+		this.obj.innerHTML = '';
+	}
 }
 
 stats_view.prototype.append_info = function(param, value, cls) {
