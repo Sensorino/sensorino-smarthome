@@ -9,8 +9,9 @@
 #
 import sys
 import collections
-import asyncore
 import copy
+
+import timers
 
 def log_err(msg):
 	sys.stderr.write(str(msg) + '\n')
@@ -350,8 +351,6 @@ def validate_outgoing_set(msg):
 			raise Exception('\'' + str(msg['from']) + \
 					'\' is not a valid Base address')
 
-# Note: not basing on asyncore.dispatcher because it doesn't have any timer
-# support
 class sensorino_state():
 	def __init__(self, storage):
 		self.storage = storage
@@ -394,9 +393,15 @@ class sensorino_state():
 		if addr in self.state:
 			state = copy.deepcopy(self.state[addr])
 
-		self.pending[addr] = ( msg, callback, state, set(), [] )
+		# Assume success after 20s if no feedback
+		# Normally we could use a ~1s timeout and the callback could
+		# well be used by the API to return the right HTTP status
+		# code, but with some bases (BLE) with time multiplexing these
+		# times may be quite long.
+		to = timers.call_later(self.queued_success, 20, [ addr ])
+
+		self.pending[addr] = ( msg, callback, state, set(), [], to )
 		self.last_addr = addr
-		# TODO: Set a timeout?  assume success if timeout expired
 
 	def queued_change_set(self, change_set, ref_list):
 		'''After enqueue has been called, this function can be
@@ -420,7 +425,12 @@ class sensorino_state():
 
 		# An operation was pending
 		prev_msg, prev_callback, prev_state, \
-			c, r = self.pending.pop(addr)
+			c, r, to = self.pending.pop(addr)
+
+		try:
+			timers.cancel(to)
+		except:
+			pass
 
 		# Notify
 		if prev_callback is not None:
@@ -435,8 +445,10 @@ class sensorino_state():
 		if addr not in self.pending:
 			return
 
-		prev_msg, prev_callback, prev_state, change_set, ref_list = \
-			self.pending.pop(addr)
+		prev_msg, prev_callback, prev_state, change_set, ref_list, \
+			to = self.pending.pop(addr)
+
+		timers.cancel(to)
 
 		# If the failing message is a Set, try to restore the
 		# recorded node's state to what it was prior to the
