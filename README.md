@@ -1,35 +1,35 @@
 Sensorino Smart-Home Server
 ===========================
 
-See further down for general information about the Sensorino project.  This subproject forms the central piece of a smart-home network being the main control point in an architecture with any number of remote nodes and one server.  The nodes control actual sensor and actuators directly connected to them while the server tracks their state at any moment, maintains a database of activities in time and provides the User Interface.  It communicates with nodes using the _Sensorino protocol_ but also integrates with other technologies, currently Bluetooth Low-Energy.  Your network may be comprised completely of consumer Bluetooth devices, DIY _Sensorino nodes_ or any other combination thereof.
+See further down for general information about the Sensorino project.  This subproject forms the central piece of a smart-home network, being the main control point in an architecture with any number of remote nodes and one server.  The nodes control actual sensor and actuators directly connected to them while the server tracks their state at any moment, maintains a database of past activity and provides the User Interface.  It communicates with nodes using the _Sensorino protocol_ but also integrates with other technologies, currently Bluetooth Low-Energy.  Your network may be comprised completely of consumer Bluetooth devices, DIY _Sensorino nodes_ or any combination thereof.
 
-The user interface is web-based and is built around an editable 2D floor-plan.  When a new remote node is detected, it's queried for its services (discovered) and the user is alerted that they can now switch to the edit mode locate the device on the 2D map of the floor and decide the widget type that visualises incoming data and sends commands to the new services.  Signals from nodes are immediately reflected in the floorplan view.  The history of each data channel's activity can be browsed as raw values and charts of various types.
+The user interface is web-based and is built around an editable 2D floor-plan.  When a new remote node is detected, it's queried for its services (discovered) and the user is alerted that they can now switch to the edit mode to locate the device on the 2D map and decide the widget type that will visualise incoming data or send commands to the service when clicked.  Updates from the nodes are immediately reflected in the floorplan view.  The history of each data channel's activity can be browsed as raw values and charts of various types.
 
 The user interface for the Sensorino Rule Engine is still work-in-progress.
 
 Usage, requirements
 -------------------
 
-The server has no hard dependencies beyond Python.  It makes use of packages that ship with python such as _SQLite3_ and _asyncore_, except for the Bluetooth support (see below).  Installation basically boils down to cloning the repository and launching the server (`./server.py`) and one or more base scripts as appropriate.  The server will create a file-backed database in the local directory and use it for persistency and retrieving historical data.
+The server has no hard dependencies beyond Python 2.7+.  It makes use of packages that ship with python such as _SQLite3_ and _asyncore_, except for the Bluetooth support (see below).  Installation boils down to cloning the repository and launching the server (`./server.py`) and one or more base scripts as appropriate.  The server will create a file-backed database in the local directory and use it for persistency and retrieving historical data.
 
 The base script connects the server to a specific radio adapter connected to the system.  The following base scripts are available:
 
 * `base-connect.py` opens a local serial port or a USB-to-Serial adapter to talk to the Sensorino network through a local Sensorino base node (gateway).
 
-* `base-test.py` simulates a Sensorino base and one Sensorino remote node with two basic services.  This can be used for testing during development or demoing / getting a feel of the Sensorino user experience without any hardware or time investment.
+* `base-test.py` simulates a Sensorino base and one Sensorino remote node with two basic services.  This can be used for testing during development or demoing / getting a feel of the Sensorino user experience without any hardware investment.
 
-* `base-ble-dbus.py` connects to the bluez daemon of D-Bus and searches for compatible Bluetooth devices, services and characteristics.
+* `base-ble-dbus.py` connects to the bluez daemon over D-Bus and searches for compatible Bluetooth devices, services and characteristics.
 
-The server is pretty light-weight and can be successfully used on a laptop or tiny Linux machines such as the 5cm x 5cm TP-Link TL-WR703N cheap network router.  The web-interface is immediately available and by default visible from network on port 8000 of the machine.  The network interface and port data can be changed in the file config.py.  There's currently no authentication mechanism so care must be taken for the selected port not to be visible publicly (except where desired) and only to the intended Local Area Network or remotely through something like a VPN.
+The server is pretty light-weight and can be successfully used both on a laptop and on tiny Linux machines such as the 5cm x 5cm TP-Link TL-WR703N cheap network router.  The web-interface is immediately available and by default visible from network on port 8000 of the machine.  The interface and port to listen on can be changed in the file _config.py_.  There's currently no authentication mechanism so care must be taken for the selected port not to be visible publicly (except where desired) and only to the intended Local Area Network or remotely through something like a VPN.
 
-The web interface currently requires a quite modern browser because of its use of HTML5 features and has only been tested with Firefox 2x and Chrome 3x versions.
+The web interface currently requires a quite modern browser because of its use of HTML5 features and has only been tested with Firefox 2x and Chromium 3x versions.
 
 Bluetooth Low-Energy support
 ----------------------------
 
 This is currently more a proof of concept than a usable solution.  Since many Bluetooth adapters can only be connected to one remote device at a time without some form of time-division multiplexing you can currently only use one device at any time.  Multiplexing is relatively easy to add though.  Tested devices include TI _SensorTag_ and the _Yeelight Blue_ smart-lightbulb.
 
-The _dbus-python_ library is required for this to work including its dependencies (_D-Bus_, _pygobject_) and a 5.2x or later version of _bluez_ compiled without disabling the experimental features.  Some distributions already include such recent bluez but need the -E switch added to the bluetoothd invocation in their init scripts, for other distributions an external repository is needed such as a [relevant Ubuntu PPA](https://launchpad.net/~vidplace7/+archive/ubuntu/bluez5).
+The _dbus-python_ library is required for this to work including its dependencies (_D-Bus_, _pygobject_) and a 5.2x or later version of _bluez_ compiled without disabling the experimental features.  Some distributions already include such recent bluez but need the `-E` switch added to the bluetoothd invocation in their init scripts, for other distributions an external repository is needed such as the [relevant Ubuntu PPA](https://launchpad.net/~vidplace7/+archive/ubuntu/bluez5).
 
 The Sensorino Project
 =====================
