@@ -67,8 +67,14 @@ class agent():
 						node_state[svc_addr]:
 					yield ( node_addr, svc_addr )
 
-				if svc_addr in node_state and '_outdated' \
-						in node_state[svc_addr]:
+			# For now, look for all iffy services within the node
+			for svc_addr in node_state:
+				if not isinstance(svc_addr, int):
+					continue
+				if svc_addr in [ 0, 1 ]: # Special services
+					continue
+
+				if '_outdated' in node_state[svc_addr]:
 					yield ( node_addr, svc_addr, None )
 
 	def query_path(self, path):
