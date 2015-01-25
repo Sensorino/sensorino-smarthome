@@ -67,6 +67,10 @@ class agent():
 						node_state[svc_addr]:
 					yield ( node_addr, svc_addr )
 
+				if svc_addr in node_state and '_outdated' \
+						in node_state[svc_addr]:
+					yield ( node_addr, svc_addr, None )
+
 	def query_path(self, path):
 		if len(path) == 1:
 			msg = {
@@ -74,7 +78,7 @@ class agent():
 				'type': 'request',
 				'serviceId': 0,
 			}
-		else:
+		elif len(path) == 2:
 			msg = {
 				'to': path[0],
 				'type': 'request',
