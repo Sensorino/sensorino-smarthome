@@ -403,6 +403,9 @@ class sensorino_state():
 		self.pending[addr] = ( msg, callback, state, set(), [], to )
 		self.last_addr = addr
 
+	def queue_empty(self, addr):
+		return addr not in self.pending
+
 	def queued_change_set(self, change_set, ref_list):
 		'''After enqueue has been called, this function can be
 		used to additionally save information about the set of

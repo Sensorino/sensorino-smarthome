@@ -11,12 +11,17 @@
 # from then on.
 #
 import sensorino
+import timers
+import random
 
 class agent():
 	def __init__(self, sensorino_state):
 		self.state = sensorino_state
 
 		self.req_handlers = []
+
+		self.to_query = set()
+		self.timeout = None
 
 		self.state.subscribe_changes(self.handle_sensorino_state_change)
 
@@ -76,19 +81,65 @@ class agent():
 				'serviceId': path[1],
 				'dataType': 'dataType',
 			}
+		else:
+			msg = {
+				'to': path[0],
+				'type': 'request',
+				'serviceId': path[1],
+			}
 
 		for handler in self.req_handlers:
 			handler(msg)
 
+	def update(self, run_queue):
+		work_pending = False
+		new_queue = set()
+
+		for path in self.get_undiscovered(self.to_query):
+			# Check if we have no ongoing requests with this node
+			if run_queue and self.state.queue_empty(path[0]):
+				# Send the query
+				self.query_path(path)
+
+				run_queue = False
+
+				# Don't re-add this path to the queue
+				# TODO: also add it to some sort of cache of
+				# last executed queries so we don't re-send
+				# them endlessly on permanent errors.  But we
+				# do want to re-try them every now and then,
+				# say every could of minutes in case a device
+				# happens to come back online.
+				continue
+
+			new_queue.add(path)
+			if not run_queue and not work_pending and \
+					self.state.queue_empty(path[0]):
+				work_pending = True
+
+		self.to_query = new_queue
+		if work_pending:
+			self.schedule()
+
+	def schedule(self):
+		if self.timeout is not None:
+			timers.cancel(self.timeout)
+
+		# Make the delay between an incoming publish and any requests
+		# resulting from it (and consecuently also between consecutive
+		# agent requests) slightly random to avoid consistently
+		# stepping on somebody else's toes.  This is similar to the
+		# discovery mechanism in Bluetooth with random back-off times.
+		# Make the perdiod something between 500ms and 5s
+		delay = random.random() * (5 - 0.5) + 0.5
+		self.timeout = timers.call_later(self.run_queue, delay)
+
 	def handle_sensorino_state_change(self, change_set, error=False):
-		# TODO: once we have timer support, add delays between
-		# consecutive requests and between a publish and a request
+		self.to_query |= change_set
 
-		# TODO: in sensorino_state, or maybe in the base, must add
-		# a busy bit to remember if we have any request pending.
+		self.update(False)
 
-		for path in self.get_undiscovered(change_set):
-			self.query_path(path)
+	def run_queue(self):
+		self.timeout = None
 
-			# Only one query at a time
-			break
+		self.update(True)
