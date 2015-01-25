@@ -374,6 +374,11 @@ class sensorino_state():
 	def load(self):
 		self.state = self.storage.get_tree_current()
 
+		# Whenever we load a saved state we may be out of date with
+		# the actual channel values so mark all the services as
+		# potentially outdated.
+		self.mark_outdated()
+
 	def enqueue(self, msg, callback):
 		'''Save the message to the pending-op queue so we can
 		track the success status of this operation.  But first
@@ -478,9 +483,22 @@ class sensorino_state():
 		if prev_callback is not None:
 			prev_callback(prev_msg, 'error', msg)
 
-		# TODO: possibly, if the last message was a Set, now
-		# send a Request so we can reliably know the current
-		# state.
+		# TODO: if the last message was a Set, now set the _outdated
+		# flag on all affected services so that we can relibable
+		# know the current state again.
+
+	def mark_outdated(self, nodes=None):
+		if nodes is None:
+			nodes = self.state
+		for node_addr in nodes:
+			node_state = self.state[node_addr]
+			for service_id in self.state[node_addr]:
+				if service_id in [ 0, 1 ]: # Special services
+					continue
+				if not isinstance(service_id, int):
+					continue
+				service_state = node_state[service_id]
+				service_state['_outdated'] = True
 
 	# Must have gone through the static validation first
 	def validate_incoming_publish(self, msg):
@@ -660,9 +678,16 @@ class sensorino_state():
 
 			changes.append(( ( '_discovered', ), True ))
 
+		for typ in accept_by_type:
+			total = accept_by_type[typ] + publish_by_type[typ]
+			if typ not in service_state or \
+					len(service_state[typ]) < total:
+				service_state['_outdated'] = True
+				break
+
 		return changes
 
-	def update_state(self, timestamp, msg, addr, base_id, is_set):
+	def update_state(self, timestamp, msg, addr, base_id, is_set, pending):
 		'''Process an incoming or outgoing message such as Publish
 		or Set and see what state changes it implies.  Update our
 		local copy of the state and the database.'''
@@ -772,20 +797,61 @@ class sensorino_state():
 				field = datatype_to_name(field)
 			fields.append(field)
 
-		# Special case: if a set message has no values and is
+		# HACK: We make this an instance variable only so it can be
+		# accessed from within check_full_update as there seems to be
+		# no reliable way to reference outer function variables
+		self.clear_outdated = '_outdated' in service_state
+		if self.clear_outdated:
+			prefix = '_publish_count_'
+			datatypes_left = set( \
+				[ t for t in service_state if \
+					not t.startswith('_') ] + \
+				[ t[len(prefix):] for t in service_state if \
+					t.startswith(prefix) ])
+
+		# Special case: if a SET message has no values and is
 		# addressed at a service with one boolean channel, toggle
-		# that channel's value.
+		# that channel's value.  In that case, if the service is
+		# marked _outdated, this flag will not be cleared.
 		if is_set and not fields and \
 				'_accept_count_switch' in service_state and \
 				service_state['_accept_count_switch'] == 1 and \
 				'switch' in service_state:
 			msg['switch'] = not service_state['switch'][0]
 			fields.append('switch')
+			self.clear_outdated = False
 
+		# If this message (SET or PUBLISH) contained current/new
+		# values for every single channel in this service, and that
+		# service had the _outdated flag set, it can be cleared now.
+		def check_full_update(datatype, vals):
+			if not self.clear_outdated:
+				return
+
+			datatypes_left.remove(datatype)
+
+			cnt = 0
+			prop_name = '_publish_count_' + datatype
+			if prop_name in service_state:
+				cnt += service_state[prop_name]
+			prop_name = '_accept_count_' + datatype
+			if prop_name in service_state:
+				cnt += service_state[prop_name]
+
+			if len(vals) < cnt:
+				self.clear_outdated = False
+
+		# Finally process the message contents
 		for field in fields:
-			handle_field(field, valuelist_from_msg(msg, field))
+			vals = valuelist_from_msg(msg, field)
+			handle_field(field, vals)
+			check_full_update(field, vals)
 		if len(service_ids):
 			handle_field('serviceId', service_ids)
+			check_full_update('serviceId', service_ids)
+
+		if self.clear_outdated and not datatypes_left:
+			del service_state['_outdated']
 
 		# Special case: Service ID 0 publish messages are the node
 		# description messages.  If we receive one, the node is
@@ -799,6 +865,13 @@ class sensorino_state():
 			change_refs.append(ref)
 
 			changes.append(( addr, '_discovered' ))
+
+		# Additionally, if we had not issued a request for the node's
+		# description, this message may have been triggered by a node
+		# reset.  In that case we need to update our copy of the node's
+		# channel values as the values may have been reset too.
+		if main_service_id == 0 and not is_set and not pending:
+			self.mark_outdated([ addr ])
 
 		self.storage.commit()
 
@@ -824,9 +897,10 @@ class sensorino_state():
 	def handle_publish(self, timestamp, msg, base_id):
 		addr = addr_from_msg(msg, 'from')
 
+		pending = addr in self.pending
 		self.queued_success(addr)
 
-		self.update_state(timestamp, msg, addr, base_id, False)
+		self.update_state(timestamp, msg, addr, base_id, False, pending)
 
 	def handle_error(self, timestamp, msg, base_id):
 		if 'from' in msg:
@@ -850,8 +924,8 @@ class sensorino_state():
 
 		self.enqueue(msg, callback)
 
-		change_set, change_refs = \
-			self.update_state(timestamp, msg, addr, base_id, True)
+		change_set, change_refs = self.update_state(timestamp, \
+				msg, addr, base_id, True, False)
 
 		self.queued_change_set(change_set, change_refs)
 
@@ -875,6 +949,11 @@ class sensorino_state():
 		# Again questionable here but assume success if we've
 		# got no other indication from the remote end.
 		self.queued_success(addr)
+
+		# Possibly should also set the _outdated flag on the service
+		# if the message contains an address and a serviceId we know
+		# about so that we can sync the channel values in case this
+		# is actually a valid message that we simply don't understand.
 
 	def get_state_tree(self):
 		return self.state
