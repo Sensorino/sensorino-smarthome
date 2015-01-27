@@ -31,6 +31,7 @@ import os
 ports = [
 	'/dev/ttyUSB0', '/dev/ttyUSB1',
 	'/dev/ttyACM0', '/dev/ttyACM1',
+	'/dev/ttyATH0',
 	'/dev/ttyS0'
 ]
 if len(sys.argv) > 1:
@@ -54,6 +55,10 @@ for port in ports:
 if f is None:
 	sys.stderr.write('Please pass the character device path as argument\n')
 	sys.exit(-1)
+
+# Reset the Base's parser state by sending it a NULL byte
+f.write(b'\0')
+f.flush()
 
 sys.stderr.write('Connected to serial port ' + port + '\n')
 
