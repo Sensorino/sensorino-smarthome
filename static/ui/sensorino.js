@@ -272,12 +272,12 @@ sensorino_state.prototype.get_svc_channel_counts = function(svc) {
 
 		var chan_cnt = 0;
 		if ('_publish_count_' + type in svc && '_accept_count_' + type in svc)
-			var chan_cnt = svc['_publish_count_' + type] +
-				svc['_accept_count_' + type];
+			chan_cnt = svc['_publish_count_' + type] + svc['_accept_count_' + type];
 
-		for (var chan_id in svc[type])
-			if (parseInt(chan_id) <= chan_cnt)
-				chan_cnt = parseInt(chan_id) + 1;
+		if (type in svc)
+			for (var chan_id in svc[type])
+				if (parseInt(chan_id) >= chan_cnt)
+					chan_cnt = parseInt(chan_id) + 1;
 
 		var publish_cnt = chan_cnt;
 		if ('_publish_count_' + type in svc)
