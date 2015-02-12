@@ -1,3 +1,4 @@
 *.pyc
 sensorino.db
+static/cache
 notes
