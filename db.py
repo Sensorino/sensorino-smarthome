@@ -32,6 +32,10 @@ def sqlite_to_datatype(val):
 # a nice solution if it wasn't for that.
 sqlite3.register_adapter(bool, lambda b: buffer('\x01' if b else ''))
 
+# Dicts - TODO
+# For now convert them to strings (repr or json.dumps?)
+sqlite3.register_adapter(dict, lambda b: repr(b))
+
 def sqlite_to_value(obj):
 	if isinstance(obj, buffer):
 		return len(obj) > 0

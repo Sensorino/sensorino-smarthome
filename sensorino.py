@@ -64,7 +64,7 @@ known_datatypes = [
 	# Metatypes
 	( 'dataType', 0, str ),
 	( 'serviceId', 1, int ),
-	( 'message', 2, str ),
+	( 'message', 2, dict ),
 	( 'expression', 3, str ),
 	# ISO-defined physical dimensions
 	( 'acceleration', 20, float ),
@@ -145,6 +145,9 @@ def valuelist_validate_types(vallist, datatype):
 			if val in known_datatypes_dict:
 				continue
 			log_warn('Unknown data type \'' + val + '\'')
+	if datatype == 'message':
+		# TODO: convert to message_dict and inspect recursively
+		pass
 
 def validate_incoming_publish(msg):
 	# Validate the source address
