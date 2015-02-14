@@ -606,7 +606,7 @@ function floorplan(canvas, sensorino_state) {
 		clear_tip('fp-save');
 		set_tip('Floorplan saved Ok.');
 
-		modifed = false;
+		modified = false;
 	}
 
 	function save_error(err) {
