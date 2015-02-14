@@ -728,6 +728,18 @@ function floorplan(canvas, sensorino_state) {
 		this.update_mode();
 	}
 
+	window.addEventListener('beforeunload', function (e) {
+			var confirm_msg = 'It looks like you have unsaved changes in your ' +
+				'floorplan.  If you want them saved to the server you need to switch ' +
+				'away from the Edit mode before leaving.';
+
+			if (!modified)
+				return;
+
+			(e || window.event).returnValue = confirm_msg; /* Gecko + IE */
+			return confirm_msg; /* Gecko + Webkit, Safari, Chrome etc. */
+		});
+
 	/* Everything is now initialised, load the floorplan data from server */
 	this.load_state = function(state) {
 		this.reset_edit_state()
