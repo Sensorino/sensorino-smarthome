@@ -434,12 +434,15 @@ def base_run(timeout):
 	global s, parse_state
 
 	r, w, e = select.select([ s ], [], [ s ], timeout)
-	if len(e):
+	if e:
 		raise BaseDisconnect()
-	if not len(r):
+	if not r:
 		return
 
-	for chr in s.recv(8192).decode('utf-8'):
+	d = s.recv(8192)
+	if not d:
+		raise BaseDisconnect()
+	for chr in d.decode('utf-8'):
 		obj = parse_state.handle_char(chr)
 		if obj is not None:
 			base_handle_input(obj)

@@ -88,7 +88,10 @@ while 1:
 			break
 		s.sendall(d)
 	if s in r:
-		f.write(s.recv(8192))
+		d = s.recv(8192)
+		if not d:
+			break
+		f.write(d)
 		f.flush()
 
 sys.stderr.write('Disconnecting\n')

@@ -487,7 +487,7 @@ class sensorino_state():
 			prev_callback(prev_msg, 'error', msg)
 
 		# TODO: if the last message was a Set, now set the _outdated
-		# flag on all affected services so that we can relibable
+		# flag on all affected services so that we can relibably
 		# know the current state again.
 
 	def mark_outdated(self, nodes=None):
