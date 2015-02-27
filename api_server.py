@@ -20,6 +20,7 @@ import cgi
 import collections
 import os
 import time
+import sys
 
 class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 	protocol_version = 'HTTP/1.1' # Enable keep-alive
@@ -34,9 +35,7 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 		self.subscribed_to_console = 0
 		self.server.conns.append(self)
 
-	def handle_close(self):
-		asynchat.async_chat.handle_close(self)
-
+	def done(self):
 		self.server.conns.remove(self)
 
 		if self.subscribed_to_changes:
@@ -48,6 +47,23 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 			self.server.console.unsubscribe_lines(
 					self.handle_sensorino_console_line)
 			self.subscribed_to_console = 0
+
+	def handle_close(self):
+		self.done()
+
+		asynchat.async_chat.handle_close(self)
+
+	def handle_error(self):
+		t, v = sys.exc_info()[:2]
+		sensorino.log_err(str(self.client_address) +
+				': Dropping client: ' + str(t) + ': ' +
+				str(v))
+		self.done()
+
+		try:
+			self.close()
+		except:
+			pass
 
 	def check_params(self, params):
 		unknown = []
@@ -159,13 +175,19 @@ class sensorino_httpd_request_handler(medusaserver.RequestHandler):
 			chg_data.append(( path, obj ))
 
 		content = json.dumps(chg_data) + ','
-		self.send_stream_chunk(content)
+		try:
+			self.send_stream_chunk(content)
+		except:
+			self.handle_error()
 
 	def handle_sensorino_console_line(self, line):
 		json_str = json.dumps(line)
 
 		content = json_str + ','
-		self.send_stream_chunk(content)
+		try:
+			self.send_stream_chunk(content)
+		except:
+			self.handle_error()
 
 	def handle_api_sensorino(self):
 		self.check_params(self.time_params)

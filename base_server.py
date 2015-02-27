@@ -69,19 +69,42 @@ class sensorino_base_handler(asyncore.dispatcher_with_send):
 						'" already exists')
 		except Exception as e:
 			sensorino.log_warn(str(e.args))
-			self.close()
+			try:
+				self.close()
+			except:
+				pass
 			return
 
 		self.server.bases[self.name] = self
 
-		sensorino.log_warn('New Base connected')
+		sensorino.log_warn(str(self.client_address) +
+				': New Base connected')
+
+	def done(self):
+		if self.name is None:
+			return
+
+		del self.server.bases[self.name]
+
+		sensorino.log_warn(str(self.client_address) +
+				': Base disconnected')
 
 	def handle_close(self):
 		asyncore.dispatcher.handle_close(self)
 
-		del self.server.bases[self.name]
+		self.done()
 
-		sensorino.log_warn('Base disconnected')
+	def handle_error(self):
+		t, v = sys.exc_info()[:2]
+		sensorino.log_err(str(self.client_address) +
+				': Dropping base: ' + str(t) + ': ' +
+				str(v))
+		self.done()
+
+		try:
+			self.close()
+		except:
+			pass
 
 	def handle_read(self):
 		for chr in self.recv(8192).decode('utf-8'):
