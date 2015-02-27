@@ -74,25 +74,30 @@ s.sendall(('{ "base-name": "' + base_name + '" }').encode('utf8'))
 
 sys.stderr.write('Connected to server\n')
 
-while 1:
-	try:
+try:
+	while 1:
 		r, w, e = select.select([ f, s ], [], [ f, s ])
-	except KeyboardInterrupt:
-		break
-	if e:
-		break
+		if e:
+			sys.stderr.write('Special condition\n')
+			break
 
-	if f in r:
-		d = os.read(f.fileno(), 8192)
-		if not d:
-			break
-		s.sendall(d)
-	if s in r:
-		d = s.recv(8192)
-		if not d:
-			break
-		f.write(d)
-		f.flush()
+		if f in r:
+			d = os.read(f.fileno(), 8192)
+			if not d:
+				sys.stderr.write('Port EOF\n')
+				break
+			s.sendall(d)
+		if s in r:
+			d = s.recv(8192)
+			if not d:
+				sys.stderr.write('Socket EOF\n')
+				break
+			f.write(d)
+			f.flush()
+except KeyboardInterrupt:
+	pass
+except Exception as e:
+	sys.stderr.write(str(e) + '\n')
 
 sys.stderr.write('Disconnecting\n')
 try:
