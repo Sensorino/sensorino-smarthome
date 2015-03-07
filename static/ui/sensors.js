@@ -360,6 +360,7 @@ function sensor_temp(canvas, elem) {
 	}
 
 	var len = 100;
+	var ballradius = 11;
 
 	var subelems = [
 		new fabric.Path('M0,-' + (len / 2) + 'V' + (len / 2), {
@@ -374,8 +375,8 @@ function sensor_temp(canvas, elem) {
 		new fabric.Circle({
 				stroke: null,
 				fill: '#aaa',
-					top: len / 2,
-				radius: 15,
+				top: len / 2,
+				radius: ballradius + 4,
 				originX: 'center',
 				originY: 'center',
 				selectable: false
@@ -393,7 +394,7 @@ function sensor_temp(canvas, elem) {
 				stroke: null,
 				fill: '#abf',
 				top: len / 2,
-				radius: 11,
+				radius: ballradius,
 				originX: 'center',
 				originY: 'center',
 				selectable: false
@@ -416,8 +417,8 @@ function sensor_temp(canvas, elem) {
 			subelems.push(new fabric.Rect({
 					stroke: null,
 					fill: '#aaa',
-					top: len / 2 - (n * elem.ticks - elem.min_value) * len /
-						(elem.max_value - elem.min_value),
+					top: len / 2 - ballradius - (n * elem.ticks - elem.min_value) *
+						(len - ballradius) / (elem.max_value - elem.min_value),
 					width: 14,
 					height: 1,
 					originX: 'center',
@@ -443,8 +444,8 @@ function sensor_temp(canvas, elem) {
 			y = elem.max_value;
 			linecap = 'round';
 		}
-		y = len / 2 - (y - elem.min_value) * len /
-			(elem.max_value - elem.min_value);
+		y = len / 2 - ballradius - (y - elem.min_value) *
+			(len - ballradius) / (elem.max_value - elem.min_value);
 
 		temp.path[0][2] = y;
 		temp.set({ opacity: o, strokeLineCap: linecap });
